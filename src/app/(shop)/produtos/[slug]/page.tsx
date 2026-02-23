@@ -2,6 +2,11 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { formatBRL } from "@/lib/money";
+import { AddToCart } from "@/components/shop/AddToCart";
+
+function labelVariant(v: { size: string | null; finish: string | null; color: string | null; personalization: string | null }) {
+  return [v.size, v.finish, v.color, v.personalization].filter(Boolean).join(" • ") || "Padrão";
+}
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -18,7 +23,13 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   if (!product || !product.isActive) return notFound();
 
   const first = product.variants[0];
-  const hasPromo = !!first?.compareAtCents && (first.compareAtCents ?? 0) > first.priceCents;
+
+  const variantsForClient = product.variants.map((v) => ({
+    id: v.id,
+    label: labelVariant(v),
+    priceBRL: formatBRL(v.priceCents),
+    stock: v.stock,
+  }));
 
   return (
     <div className="container py-10">
@@ -52,58 +63,24 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
           {first ? (
             <div className="mt-4">
-              <div className="flex items-baseline gap-3">
-                <div className="text-2xl font-semibold">{formatBRL(first.priceCents)}</div>
-                {hasPromo ? (
-                  <div className="text-sm text-[hsl(var(--muted))] line-through">
-                    {formatBRL(first.compareAtCents!)}
-                  </div>
-                ) : null}
-              </div>
+              <div className="text-2xl font-semibold">{formatBRL(first.priceCents)}</div>
               <div className="mt-2 text-sm text-[hsl(var(--muted))]">
-                Estoque: <span className="font-medium text-[hsl(var(--fg))]">{first.stock}</span>
                 {product.isPersonalized ? (
                   <>
-                    {" "}• Prazo de produção:{" "}
+                    Prazo de produção:{" "}
                     <span className="font-medium text-[hsl(var(--fg))]">{product.productionDays} dias</span>
                   </>
-                ) : null}
+                ) : (
+                  <>Pronto para envio</>
+                )}
               </div>
             </div>
           ) : (
             <div className="mt-4 text-sm text-[hsl(var(--muted))]">Sem variantes ativas.</div>
           )}
 
-          <div className="mt-6 card p-4">
-            <div className="text-sm font-semibold">Variações (MVP)</div>
-            <p className="mt-1 text-sm text-[hsl(var(--muted))]">
-              No Bloco B a gente conecta isso ao carrinho/checkout.
-            </p>
-
-            <div className="mt-3 grid gap-2">
-              {product.variants.map((v) => (
-                <div key={v.id} className="flex items-center justify-between rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2">
-                  <div className="text-sm">
-                    <div className="font-medium">
-                      {[v.size, v.finish, v.color, v.personalization].filter(Boolean).join(" • ") || "Padrão"}
-                    </div>
-                    <div className="text-xs text-[hsl(var(--muted))]">SKU: {v.sku}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-semibold">{formatBRL(v.priceCents)}</div>
-                    <div className="text-xs text-[hsl(var(--muted))]">Estoque: {v.stock}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <button
-              disabled
-              className="mt-4 w-full rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-white opacity-60"
-              title="Carrinho entra no Bloco B"
-            >
-              Comprar (Bloco B)
-            </button>
+          <div className="mt-6">
+            <AddToCart variants={variantsForClient} />
           </div>
 
           {product.description ? (

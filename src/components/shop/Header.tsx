@@ -1,6 +1,11 @@
 import Link from "next/link";
+import { getCart } from "@/lib/cart";
+import { CartDrawer } from "@/components/shop/CartDrawer";
 
-export function Header() {
+export async function Header() {
+  const cart = await getCart();
+  const count = cart.items.reduce((acc, it) => acc + it.qty, 0);
+
   return (
     <header className="border-b border-[hsl(var(--border))] bg-white/70 backdrop-blur">
       <div className="container flex items-center justify-between py-4">
@@ -12,16 +17,14 @@ export function Header() {
           </div>
         </Link>
 
-        <nav className="flex items-center gap-6 text-sm">
+        <nav className="flex items-center gap-4 text-sm">
           <Link href="/produtos" className="hover:opacity-80">Produtos</Link>
           <Link href="/sobre" className="hover:opacity-80">Sobre</Link>
           <Link href="/contato" className="hover:opacity-80">Contato</Link>
-          <Link
-            href="/admin"
-            className="rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-1.5 text-xs text-[hsl(var(--muted))] hover:text-[hsl(var(--fg))]"
-          >
+          <Link href="/admin" className="rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-1.5 text-xs text-[hsl(var(--muted))] hover:text-[hsl(var(--fg))]">
             Admin
           </Link>
+          <CartDrawer count={count} />
         </nav>
       </div>
     </header>

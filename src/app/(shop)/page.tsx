@@ -1,8 +1,14 @@
 import Link from "next/link";
+import Image from "next/image";
 import { prisma } from "@/lib/prisma";
+import { SectionHeader } from "@/components/shop/SectionHeader";
 import { ProductCard } from "@/components/shop/ProductCard";
+import { getBestSellers } from "@/lib/bestSellers";
 
 export default async function HomePage() {
+  const content = (await prisma.siteContent.findFirst())!;
+  const trust = (content?.trustBarJson as any[]) || [];
+
   const featured = await prisma.product.findMany({
     where: { isActive: true, isFeatured: true },
     orderBy: { createdAt: "desc" },
@@ -23,58 +29,59 @@ export default async function HomePage() {
     },
   });
 
+  const best = await getBestSellers(6);
+
   return (
     <div>
-      {/* Hero */}
+      {/* HERO */}
       <section className="container py-10">
         <div className="card overflow-hidden">
           <div className="grid gap-8 p-8 md:grid-cols-2 md:items-center">
             <div>
-              <div className="badge">Artesanal premium • Sul do Brasil</div>
-              <h1 className="mt-4 text-3xl font-semibold tracking-tight md:text-4xl">
-                A cuia certa pro teu mate.
+              <div className="badge">{content.heroBadgeText}</div>
+              <h1 className="mt-4 text-3xl font-semibold tracking-tight md:text-5xl">
+                {content.heroTitle}
               </h1>
               <p className="mt-3 text-sm text-[hsl(var(--muted))]">
-                Acabamento premium, opções personalizadas e envio para todo o Brasil — direto de Erechim/RS.
+                {content.heroSubtitle}
               </p>
 
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link
-                  href="/produtos"
+                  href={content.heroPrimaryButtonLink}
                   className="inline-flex items-center justify-center rounded-xl bg-[hsl(var(--primary))] px-5 py-2.5 text-sm font-medium text-white hover:opacity-95"
                 >
-                  Comprar agora
+                  {content.heroPrimaryButtonText}
                 </Link>
                 <Link
-                  href="/sobre"
+                  href={content.heroSecondaryButtonLink}
                   className="inline-flex items-center justify-center rounded-xl border border-[hsl(var(--border))] bg-white px-5 py-2.5 text-sm font-medium hover:bg-[hsl(var(--accent))]"
                 >
-                  Conhecer a marca
+                  {content.heroSecondaryButtonText}
                 </Link>
               </div>
 
-              <div className="mt-6 grid gap-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-[hsl(var(--gold))]" />
-                  <span>Acabamento premium</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-[hsl(var(--gold))]" />
-                  <span>Personalização sob medida</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-[hsl(var(--gold))]" />
-                  <span>Envio Brasil + retirada em Erechim</span>
-                </div>
+              <div className="mt-6 text-xs text-[hsl(var(--muted))]">
+                {content.scarcityText}
               </div>
             </div>
 
             <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--accent))]">
-              <div className="absolute inset-0 bg-gradient-to-tr from-[hsl(var(--primary))]/10 via-transparent to-[hsl(var(--gold))]/10" />
-              <div className="absolute bottom-4 left-4 right-4 rounded-2xl bg-white/80 p-4 backdrop-blur">
-                <div className="text-sm font-semibold">Feito pra durar — e pra aparecer.</div>
+              {content.heroImageUrl ? (
+                <Image
+                  src={content.heroImageUrl}
+                  alt="Hero"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                />
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-tr from-[hsl(var(--primary))]/12 via-transparent to-[hsl(var(--gold))]/10" />
+              )}
+              <div className="absolute bottom-4 left-4 right-4 rounded-2xl bg-white/85 p-4 backdrop-blur">
+                <div className="text-sm font-semibold">Premium, clean e feito pra durar.</div>
                 <div className="mt-1 text-xs text-[hsl(var(--muted))]">
-                  Peças selecionadas + detalhes que elevam a tua roda de mate.
+                  Envio Brasil • Retirada em Erechim/RS
                 </div>
               </div>
             </div>
@@ -82,14 +89,21 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Destaques */}
-      <section className="container py-6">
-        <div className="flex items-end justify-between gap-4">
-          <h2 className="text-lg font-semibold">Destaques</h2>
-          <Link href="/produtos" className="text-sm text-[hsl(var(--muted))] hover:text-[hsl(var(--fg))]">
-            Ver tudo →
-          </Link>
+      {/* TRUST BAR */}
+      <section className="container">
+        <div className="grid gap-3 md:grid-cols-4">
+          {trust.map((it, idx) => (
+            <div key={idx} className="rounded-2xl border border-[hsl(var(--border))] bg-white p-4">
+              <div className="text-sm font-semibold">{it.title}</div>
+              <div className="mt-1 text-xs text-[hsl(var(--muted))]">{it.desc}</div>
+            </div>
+          ))}
         </div>
+      </section>
+
+      {/* DESTAQUES */}
+      <section className="container py-10">
+        <SectionHeader title="Destaques" subtitle="Peças com estética premium e acabamento impecável." href="/produtos" />
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {featured.map((p) => (
             <ProductCard
@@ -106,9 +120,31 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Novidades */}
-      <section className="container py-6">
-        <h2 className="text-lg font-semibold">Novidades</h2>
+      {/* INSTITUCIONAL */}
+      <section className="container py-2">
+        <div className="card p-8">
+          <div className="grid gap-6 md:grid-cols-2 md:items-center">
+            <div>
+              <div className="text-lg font-semibold">{content.institutionalTitle}</div>
+              <p className="mt-2 text-sm text-[hsl(var(--muted))]">
+                {content.institutionalText}
+              </p>
+            </div>
+
+            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--accent))]">
+              {content.institutionalImageUrl ? (
+                <Image src={content.institutionalImageUrl} alt="Institucional" fill className="object-cover" sizes="50vw" />
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-tr from-[hsl(var(--gold))]/12 via-transparent to-[hsl(var(--primary))]/10" />
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* NOVIDADES */}
+      <section className="container py-10">
+        <SectionHeader title="Novidades" subtitle="Lançamentos e reposições." href="/produtos" />
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {newest.map((p) => (
             <ProductCard
@@ -125,23 +161,28 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Depoimentos */}
+      {/* MAIS VENDIDOS REAL */}
       <section className="container py-10">
-        <div className="card p-8">
-          <h2 className="text-lg font-semibold">Quem compra, volta.</h2>
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
-            {[
-              { name: "Rafael • RS", text: "Acabamento impecável. Chegou rápido e muito bem embalado." },
-              { name: "Camila • SC", text: "Personalização ficou perfeita. Presente que virou o favorito." },
-              { name: "João • PR", text: "A cuia é ainda mais bonita ao vivo. Recomendo demais." },
-            ].map((t) => (
-              <div key={t.name} className="rounded-2xl border border-[hsl(var(--border))] bg-white p-4">
-                <div className="text-sm text-[hsl(var(--muted))]">“{t.text}”</div>
-                <div className="mt-3 text-sm font-medium">{t.name}</div>
-              </div>
-            ))}
-          </div>
+        <SectionHeader title="Mais vendidos" subtitle="Os favoritos da roda de mate (com base em pedidos pagos)." href="/produtos" />
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {best.map((p) => (
+            <ProductCard
+              key={p.id}
+              slug={p.slug}
+              name={p.name}
+              imageUrl={p.images[0]?.url ?? null}
+              isFeatured={p.isFeatured}
+              isNew={p.isNew}
+              fromPriceCents={p.variants[0]?.priceCents ?? 0}
+              fromCompareAtCents={p.variants[0]?.compareAtCents ?? null}
+            />
+          ))}
         </div>
+        {best.length === 0 ? (
+          <div className="mt-4 text-xs text-[hsl(var(--muted))]">
+            Ainda sem base de pedidos pagos. Assim que o webhook confirmar pagamentos, isso preenche automaticamente.
+          </div>
+        ) : null}
       </section>
     </div>
   );

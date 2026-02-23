@@ -1,19 +1,17 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { defaultMetadata } from "@/lib/seo";
+import { Trackers } from "@/components/shop/Trackers";
 
-export const metadata: Metadata = {
-  title: {
-    default: "Cuias Lazaretti",
-    template: "%s • Cuias Lazaretti",
-  },
-  description: "A cuia certa pro teu mate. Cuias premium, bombas e acessórios.",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
-};
+export const metadata: Metadata = defaultMetadata();
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
-      <body>{children}</body>
+      <body>
+        <Trackers />
+        {children}
+      </body>
     </html>
   );
 }
