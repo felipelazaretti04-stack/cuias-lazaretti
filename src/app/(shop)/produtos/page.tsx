@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { ProductCard } from "@/components/shop/ProductCard";
+import { notFound } from "next/navigation";
 
 type SearchParams = {
   q?: string;
@@ -77,9 +78,9 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
             className="w-full rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 text-sm"
           >
             <option value="">Todas</option>
-            {categories.map((c) => (
+            {categories.map((c: (typeof categories)[number]) =>
               <option key={c.id} value={c.slug}>{c.name}</option>
-            ))}
+            )}
           </select>
           <select
             name="sort"
@@ -114,7 +115,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
       </div>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {products.map((p) => (
+        {products.map((p: (typeof products)[number]) =>
           <ProductCard
             key={p.id}
             slug={p.slug}
@@ -125,7 +126,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
             fromPriceCents={p.variants[0]?.priceCents ?? 0}
             fromCompareAtCents={p.variants[0]?.compareAtCents ?? null}
           />
-        ))}
+        )}
       </div>
 
       {products.length === 0 ? (

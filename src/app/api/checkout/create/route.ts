@@ -9,6 +9,7 @@ import { safeLogError } from "@/lib/idempotency";
 
 const schema = z.object({
   customer: z.object({
+    couponCode: z.string().optional().nullable(),
     name: z.string().min(2).max(120),
     email: z.string().email(),
     phone: z.string().min(6).max(30),

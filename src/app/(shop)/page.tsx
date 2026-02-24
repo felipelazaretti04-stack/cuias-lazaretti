@@ -105,7 +105,7 @@ export default async function HomePage() {
       <section className="container py-10">
         <SectionHeader title="Destaques" subtitle="Peças com estética premium e acabamento impecável." href="/produtos" />
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {featured.map((p) => (
+          {featured.map((p: (typeof featured)[number]) =>
             <ProductCard
               key={p.id}
               slug={p.slug}
@@ -116,7 +116,7 @@ export default async function HomePage() {
               fromPriceCents={p.variants[0]?.priceCents ?? 0}
               fromCompareAtCents={p.variants[0]?.compareAtCents ?? null}
             />
-          ))}
+          )}
         </div>
       </section>
 
@@ -146,7 +146,7 @@ export default async function HomePage() {
       <section className="container py-10">
         <SectionHeader title="Novidades" subtitle="Lançamentos e reposições." href="/produtos" />
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {newest.map((p) => (
+          {newest.map((p: (typeof newest)[number]) =>
             <ProductCard
               key={p.id}
               slug={p.slug}
@@ -157,7 +157,7 @@ export default async function HomePage() {
               fromPriceCents={p.variants[0]?.priceCents ?? 0}
               fromCompareAtCents={p.variants[0]?.compareAtCents ?? null}
             />
-          ))}
+          )}
         </div>
       </section>
 
@@ -165,7 +165,7 @@ export default async function HomePage() {
       <section className="container py-10">
         <SectionHeader title="Mais vendidos" subtitle="Os favoritos da roda de mate (com base em pedidos pagos)." href="/produtos" />
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {best.map((p) => (
+          {best.map((p: (typeof best)[number]) =>
             <ProductCard
               key={p.id}
               slug={p.slug}
@@ -176,7 +176,7 @@ export default async function HomePage() {
               fromPriceCents={p.variants[0]?.priceCents ?? 0}
               fromCompareAtCents={p.variants[0]?.compareAtCents ?? null}
             />
-          ))}
+          )}
         </div>
         {best.length === 0 ? (
           <div className="mt-4 text-xs text-[hsl(var(--muted))]">
