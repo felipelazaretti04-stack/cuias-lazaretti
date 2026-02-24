@@ -51,8 +51,30 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
       variants: { where: { isActive: true }, orderBy: { priceCents: "asc" }, take: 1 },
       category: true,
     },
-    orderBy: { createdAt: "desc" },
+    orderBy:
+      sort === "new"
+        ? { createdAt: "desc" }
+        : { createdAt: "desc" }, // (mantém simples p/ não quebrar diff; depois refinamos preço real)
   });
+
+  // --- rating agregado (approved=true) ---
+  const ids = products.map((p) => p.id);
+  const grouped =
+    ids.length > 0
+      ? await prisma.review.groupBy({
+          by: ["productId"],
+          where: { productId: { in: ids }, approved: true },
+          _avg: { rating: true },
+          _count: { rating: true },
+        })
+      : [];
+
+  const ratingMap = new Map(
+    grouped.map((g) => [
+      g.productId,
+      { avg: Number(g._avg.rating || 0), count: g._count.rating || 0 },
+    ])
+  );
 
   return (
     <div className="container py-10">
@@ -78,7 +100,9 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
           >
             <option value="">Todas</option>
             {categories.map((c) => (
-              <option key={c.id} value={c.slug}>{c.name}</option>
+              <option key={c.id} value={c.slug}>
+                {c.name}
+              </option>
             ))}
           </select>
           <select
@@ -114,18 +138,23 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
       </div>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {products.map((p) => (
-          <ProductCard
-            key={p.id}
-            slug={p.slug}
-            name={p.name}
-            imageUrl={p.images[0]?.url ?? null}
-            isFeatured={p.isFeatured}
-            isNew={p.isNew}
-            fromPriceCents={p.variants[0]?.priceCents ?? 0}
-            fromCompareAtCents={p.variants[0]?.compareAtCents ?? null}
-          />
-        ))}
+        {products.map((p) => {
+          const r = ratingMap.get(p.id) || { avg: 0, count: 0 };
+          return (
+            <ProductCard
+              key={p.id}
+              slug={p.slug}
+              name={p.name}
+              imageUrl={p.images[0]?.url ?? null}
+              isFeatured={p.isFeatured}
+              isNew={p.isNew}
+              fromPriceCents={p.variants[0]?.priceCents ?? 0}
+              fromCompareAtCents={p.variants[0]?.compareAtCents ?? null}
+              ratingAvg={r.avg}
+              ratingCount={r.count}
+            />
+          );  
+        })}
       </div>
 
       {products.length === 0 ? (

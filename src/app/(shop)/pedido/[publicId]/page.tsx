@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { formatBRL } from "@/lib/money";
+import { TrackEvent } from "@/components/shop/TrackEvent";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,8 @@ export default async function PedidoPage({ params }: { params: Promise<{ publicI
 
   if (!order) return notFound();
 
+  const isPaid = order.status === "PAID";
+
   const statusLabel =
     order.status === "PAID" ? "Pago" :
     order.status === "SHIPPED" ? "Enviado" :
@@ -25,6 +28,7 @@ export default async function PedidoPage({ params }: { params: Promise<{ publicI
       <div className="card p-8">
         <div className="badge">Pedido</div>
         <h1 className="mt-3 text-2xl font-semibold">{order.publicId}</h1>
+        {isPaid && <TrackEvent event="Purchase" payload={{ value: order.totalCents / 100, currency: "BRL" }} />}
         <p className="mt-2 text-sm text-[hsl(var(--muted))]">
           Status: <span className="font-medium text-[hsl(var(--fg))]">{statusLabel}</span>
         </p>
@@ -77,11 +81,11 @@ export default async function PedidoPage({ params }: { params: Promise<{ publicI
           </Link>
         </div>
 
-        {order.status !== "PAID" ? (
+        {!isPaid && (
           <div className="mt-6 text-xs text-[hsl(var(--muted))]">
             Se você acabou de pagar, pode levar alguns segundos pra confirmar. Recarregue esta página.
           </div>
-        ) : null}
+        )}
       </div>
     </div>
   );

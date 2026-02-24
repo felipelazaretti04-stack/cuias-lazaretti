@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Price } from "./Price";
+import { RatingStars } from "@/components/shop/RatingStars";
 
 type Props = {
   slug: string;
@@ -10,6 +11,8 @@ type Props = {
   isFeatured?: boolean;
   fromPriceCents: number;
   fromCompareAtCents?: number | null;
+  ratingAvg?: number;
+  ratingCount?: number;
 };
 
 export function ProductCard(props: Props) {
@@ -33,9 +36,15 @@ export function ProductCard(props: Props) {
         </div>
         <div className="p-4">
           <div className="text-sm font-semibold">{props.name}</div>
+
+          <div className="mt-2">
+            <RatingStars value={props.ratingAvg || 0} count={props.ratingCount || 0} />
+          </div>
+
           <div className="mt-2">
             <Price priceCents={props.fromPriceCents} compareAtCents={props.fromCompareAtCents} />
           </div>
+
           <div className="mt-3 text-xs text-[hsl(var(--muted))]">
             Ver detalhes →
           </div>

@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCart, clearCart } from "@/lib/cart";
-import { makePublicOrderId, computeOrderTotals } from "@/lib/order";
+import { makePublicOrderId } from "@/lib/order";
 import { quoteShipping } from "@/lib/shipping";
 import { createMercadoPagoPreference } from "@/lib/mercadopago";
 import { safeLogError } from "@/lib/idempotency";
+import { validateCoupon, computeDiscountCents } from "@/lib/coupons";
 
 const schema = z.object({
   customer: z.object({
@@ -13,6 +14,7 @@ const schema = z.object({
     email: z.string().email(),
     phone: z.string().min(6).max(30),
   }),
+  couponCode: z.string().optional().nullable(),
   shipping: z.object({
     method: z.enum(["PICKUP", "PAC"]),
     cep: z.string().optional(),
@@ -52,62 +54,54 @@ export async function POST(req: Request) {
 
   const method = parsed.data.shipping.method;
 
-  // valida endereço conforme método (regra crítica)
+  // valida endereço conforme método
   if (method === "PAC") {
-  const cep = (parsed.data.shipping.cep || "").replace(/\D/g, "");
-  if (cep.length !== 8) {
-    return NextResponse.json({ error: "CEP inválido" }, { status: 400 });
-  }
+    const cep = (parsed.data.shipping.cep || "").replace(/\D/g, "");
+    if (cep.length !== 8) return NextResponse.json({ error: "CEP inválido" }, { status: 400 });
 
-  const addr = parsed.data.shipping.address as any;
-  const required = ["addressLine", "number", "district", "city", "uf", "cep"];
-
-  for (const k of required) {
-    if (!String(addr?.[k] || "").trim()) {
-      return NextResponse.json({ error: `Endereço inválido: ${k}` }, { status: 400 });
+    const addr = parsed.data.shipping.address as any;
+    const required = ["addressLine", "number", "district", "city", "uf", "cep"];
+    for (const k of required) {
+      if (!String(addr?.[k] || "").trim()) return NextResponse.json({ error: `Endereço inválido: ${k}` }, { status: 400 });
+    }
+  } else {
+    const addr = parsed.data.shipping.address as any;
+    if (!String(addr?.city || "").trim() || !String(addr?.uf || "").trim()) {
+      return NextResponse.json({ error: "Para retirada, informe Cidade e UF" }, { status: 400 });
     }
   }
-} else {
-  // PICKUP - define endereço fixo automaticamente
-  parsed.data.shipping.address = {
-    city: "Erechim",
-    uf: "RS",
-    note: parsed.data.shipping.address?.note ?? null,
-  };
-}
 
-  // re-cota servidor-side (não confiar 100% no client)
+  // re-cota servidor-side
   const options = await quoteShipping({ method, cep: parsed.data.shipping.cep });
-  const selected = options[0]; // MVP: 1 opção
+  const selected = options[0];
   const clientOpt = parsed.data.shipping.option;
 
-  // se método divergir, aborta
   if (!selected || selected.method !== clientOpt.method) {
     return NextResponse.json({ error: "Opção de frete inválida" }, { status: 400 });
   }
 
   const publicId = makePublicOrderId();
 
-// 🔥 UPSERT CUSTOMER (NOVO BLOCO)
-const customer = await prisma.customer.upsert({
-  where: { email: parsed.data.customer.email },
-  update: {
-    name: parsed.data.customer.name,
-    phone: parsed.data.customer.phone,
-  },
-  create: {
-    email: parsed.data.customer.email,
-    name: parsed.data.customer.name,
-    phone: parsed.data.customer.phone,
-  },
-});
+  // upsert customer por email
+  const customer = await prisma.customer.upsert({
+    where: { email: parsed.data.customer.email },
+    update: {
+      name: parsed.data.customer.name,
+      phone: parsed.data.customer.phone,
+    },
+    create: {
+      email: parsed.data.customer.email,
+      name: parsed.data.customer.name,
+      phone: parsed.data.customer.phone,
+    },
+  });
 
-// cria pedido + itens
-const order = await prisma.order.create({
+  // cria pedido + itens
+  const order = await prisma.order.create({
     data: {
       publicId,
       status: "PENDING",
-      customerId: customer.id, // 🔥 NOVO
+      customerId: customer.id,
       customerName: parsed.data.customer.name,
       customerEmail: parsed.data.customer.email,
       customerPhone: parsed.data.customer.phone,
@@ -121,6 +115,7 @@ const order = await prisma.order.create({
 
       paymentProvider: "MERCADOPAGO",
       paymentStatus: "PENDING",
+
       items: {
         create: cart.items.map((ci) => {
           const v = map.get(ci.variantId)!;
@@ -139,18 +134,80 @@ const order = await prisma.order.create({
     },
   });
 
-  await computeOrderTotals(order.id);
+  // === CÁLCULO DE TOTAIS COM CUPOM ===
+  const orderItems = await prisma.orderItem.findMany({ where: { orderId: order.id } });
+  const subtotalCents = orderItems.reduce((acc, it) => acc + it.lineTotalCents, 0);
 
-  // cria preference Mercado Pago
+  let discountCents = 0;
+  let couponCode: string | null = null;
+
+  if (parsed.data.couponCode) {
+    const v = await validateCoupon(parsed.data.couponCode);
+    if (v.ok) {
+      couponCode = v.coupon.code;
+      discountCents = computeDiscountCents({
+        subtotalCents,
+        type: v.coupon.type,
+        value: v.coupon.value,
+      });
+    }
+  }
+
+  const totalCents = Math.max(0, subtotalCents + selected.priceCents - discountCents);
+
+  await prisma.order.update({
+    where: { id: order.id },
+    data: {
+      subtotalCents,
+      discountCents,
+      couponCode,
+      totalCents,
+    },
+  });
+
+  // === CRIAR PREFERENCE MERCADO PAGO COM RATEIO ===
   try {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+    // rateio de desconto no subtotal para MP
+    const originalSubtotal = orderItems.reduce((acc, it) => acc + it.lineTotalCents, 0);
+    const discountedSubtotal = Math.max(0, originalSubtotal - discountCents);
+
+    const mpItems = orderItems.map((it) => ({
+      title: `${it.productName}${it.variantLabel ? ` (${it.variantLabel})` : ""}`,
+      quantity: it.qty,
+      unit_price: Number((it.unitPriceCents / 100).toFixed(2)),
+    }));
+
+    // aplica rateio se houver desconto
+    if (originalSubtotal > 0 && discountCents > 0) {
+      let running = 0;
+      for (let i = 0; i < orderItems.length; i++) {
+        const it = orderItems[i];
+        const share = i === orderItems.length - 1
+          ? (discountedSubtotal - running)
+          : Math.floor((it.lineTotalCents / originalSubtotal) * discountedSubtotal);
+
+        running += share;
+        const unit = Math.floor(share / it.qty);
+        const unitCents = Math.max(1, unit);
+
+        mpItems[i].unit_price = Number((unitCents / 100).toFixed(2));
+      }
+    }
+
+    // adiciona frete como item se > 0
+    if (selected.priceCents > 0) {
+      mpItems.push({
+        title: `Frete (${selected.serviceName})`,
+        quantity: 1,
+        unit_price: Number((selected.priceCents / 100).toFixed(2)),
+      });
+    }
+
     const pref = await createMercadoPagoPreference({
       orderPublicId: order.publicId,
-      items: (await prisma.orderItem.findMany({ where: { orderId: order.id } })).map((it) => ({
-        title: `${it.productName}${it.variantLabel ? ` (${it.variantLabel})` : ""}`,
-        quantity: it.qty,
-        unit_price: Number((it.unitPriceCents / 100).toFixed(2)),
-      })),
+      items: mpItems,
       payer: { name: parsed.data.customer.name, email: parsed.data.customer.email },
       backUrls: {
         success: `${appUrl}/pedido/${order.publicId}`,
@@ -165,7 +222,7 @@ const order = await prisma.order.create({
       data: { mpPreferenceId: pref.id },
     });
 
-    // limpa carrinho (cliente já foi pro fluxo de pagamento)
+    // limpa carrinho
     await clearCart();
 
     const initPoint = pref.init_point || pref.sandbox_init_point;

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Textarea } from "@/components/ui/Textarea";
+import { track } from "@/lib/analytics";
 
 type ShippingOption = {
   method: "PICKUP" | "PAC";
@@ -41,6 +42,11 @@ export default function CheckoutPage() {
   // pickup: salva apenas city/uf + note
   const [note, setNote] = useState("");
 
+  // cupom
+  const [couponCode, setCouponCode] = useState("");
+  const [couponApplied, setCouponApplied] = useState<{ code: string; type: string; value: number } | null>(null);
+  const [couponErr, setCouponErr] = useState<string | null>(null);
+
   const [loadingQuote, setLoadingQuote] = useState(false);
   const [loadingPay, setLoadingPay] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -68,7 +74,6 @@ export default function CheckoutPage() {
   }
 
   useEffect(() => {
-    // sempre tenta cotar ao trocar método
     quote();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [method]);
@@ -89,19 +94,43 @@ export default function CheckoutPage() {
       if (!city.trim()) return false;
       if (!uf.trim()) return false;
     } else {
-      // pickup: não exigir endereço completo; apenas city/UF
       if (!city.trim()) return false;
       if (!uf.trim()) return false;
     }
     return true;
   }, [name, email, phone, selected, showPAC, cep, addressLine, number, district, city, uf]);
 
+  async function applyCoupon() {
+    setCouponErr(null);
+    if (!couponCode.trim()) return;
+
+    const res = await fetch("/api/checkout/apply-coupon", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ code: couponCode }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      setCouponApplied(null);
+      setCouponErr(data?.error || "Cupom inválido");
+      return;
+    }
+
+    const data = await res.json();
+    setCouponApplied(data.coupon);
+  }
+
   async function pay() {
     setErr(null);
     setLoadingPay(true);
 
+    // tracking
+    track("InitiateCheckout", { currency: "BRL" });
+
     const payload = {
       customer: { name, email, phone },
+      couponCode: couponApplied?.code || null,
       shipping: {
         method,
         cep: showPAC ? cep : undefined,
@@ -127,7 +156,7 @@ export default function CheckoutPage() {
     }
 
     const data = await res.json();
-    window.location.href = data.initPoint; // redireciona MP
+    window.location.href = data.initPoint;
   }
 
   return (
@@ -168,7 +197,10 @@ export default function CheckoutPage() {
               <div className="text-sm font-medium">Opções</div>
               <div className="mt-2 grid gap-2">
                 {options.map((o, idx) => (
-                  <label key={idx} className="flex items-start justify-between gap-3 rounded-2xl border border-[hsl(var(--border))] bg-white p-4">
+                  <label
+                    key={idx}
+                    className="flex items-start justify-between gap-3 rounded-2xl border border-[hsl(var(--border))] bg-white p-4"
+                  >
                     <div className="flex gap-3">
                       <input type="radio" checked={selectedIdx === idx} onChange={() => setSelectedIdx(idx)} />
                       <div>
@@ -177,9 +209,7 @@ export default function CheckoutPage() {
                           {o.deliveryDays ? `Entrega estimada: ${o.deliveryDays} dias` : "Prazo será informado após envio"}
                         </div>
                         {o.provider === "FALLBACK" && o.debugMessage ? (
-                          <div className="mt-1 text-[11px] text-[hsl(var(--muted))]">
-                            {o.debugMessage}
-                          </div>
+                          <div className="mt-1 text-[11px] text-[hsl(var(--muted))]">{o.debugMessage}</div>
                         ) : null}
                       </div>
                     </div>
@@ -209,9 +239,7 @@ export default function CheckoutPage() {
           </div>
 
           <div className="card p-6">
-            <div className="text-sm font-semibold">
-              {showPAC ? "Endereço (PAC)" : "Retirada (Erechim/RS)"}
-            </div>
+            <div className="text-sm font-semibold">{showPAC ? "Endereço (PAC)" : "Retirada (Erechim/RS)"}</div>
 
             {showPAC ? (
               <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -252,16 +280,19 @@ export default function CheckoutPage() {
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label>Observação (opcional)</Label>
-                  <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder="Ex.: quero retirar no sábado / personalização: 'Lazaretti'..." />
+                  <Textarea
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    rows={3}
+                    placeholder="Ex.: quero retirar no sábado / personalização: 'Lazaretti'..."
+                  />
                 </div>
               </div>
             )}
           </div>
 
           {err ? (
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-              {err}
-            </div>
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{err}</div>
           ) : null}
         </div>
 
@@ -271,13 +302,31 @@ export default function CheckoutPage() {
             Você será redirecionado ao Mercado Pago (Checkout Pro).
           </p>
 
+          {/* Cupom */}
+          <div className="mt-6 card p-4">
+            <div className="text-sm font-semibold">Cupom</div>
+            <div className="mt-2 flex gap-2">
+              <Input value={couponCode} onChange={(e) => setCouponCode(e.target.value)} placeholder="BEMVINDO10" />
+              <Button type="button" variant="secondary" onClick={applyCoupon}>
+                Aplicar
+              </Button>
+            </div>
+            {couponApplied ? (
+              <div className="mt-2 text-xs text-emerald-800">
+                Cupom aplicado: <b>{couponApplied.code}</b>
+              </div>
+            ) : null}
+            {couponErr ? <div className="mt-2 text-xs text-red-700">{couponErr}</div> : null}
+            <div className="mt-2 text-[11px] text-[hsl(var(--muted))]">
+              Desconto aplicado apenas no subtotal (não acumula com outros).
+            </div>
+          </div>
+
           <Button className="mt-5 w-full" disabled={!canPay || loadingPay} onClick={pay}>
             {loadingPay ? "Iniciando..." : "Pagar com Mercado Pago"}
           </Button>
 
-          <div className="mt-3 text-xs text-[hsl(var(--muted))]">
-            Ao finalizar, você concorda com as políticas da loja.
-          </div>
+          <div className="mt-3 text-xs text-[hsl(var(--muted))]">Ao finalizar, você concorda com as políticas da loja.</div>
         </div>
       </div>
     </div>
