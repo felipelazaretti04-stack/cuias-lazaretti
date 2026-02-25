@@ -3,34 +3,39 @@
 @tailwind utilities;
 
 :root {
-  --bg: 24 20% 97%;
-  --fg: 160 18% 10%;
-  --muted: 160 8% 35%;
+  /* Base quente/premium */
+  --bg: 35 35% 96%;         /* creme quente */
+  --fg: 20 22% 10%;         /* marrom bem escuro */
+  --muted: 20 10% 38%;
   --card: 0 0% 100%;
-  --border: 160 10% 86%;
-  --primary: 155 35% 18%;     /* verde escuro */
-  --accent: 38 35% 88%;       /* bege */
-  --leather: 25 35% 26%;      /* marrom couro */
-  --gold: 42 60% 55%;         /* dourado discreto */
+  --border: 25 18% 84%;
+
+  /* Brand */
+  --primary: 145 18% 20%;   /* verde musgo */
+  --accent: 34 40% 92%;     /* bege */
+  --leather: 24 30% 24%;    /* marrom couro */
+  --gold: 42 62% 52%;       /* dourado */
 }
 
-html, body {
-  height: 100%;
-}
+html, body { height: 100%; }
+body { background: hsl(var(--bg)); color: hsl(var(--fg)); }
 
-body {
-  background: hsl(var(--bg));
-  color: hsl(var(--fg));
-}
-
-.container {
-  @apply mx-auto w-full max-w-6xl px-4;
-}
+.container { @apply mx-auto w-full max-w-6xl px-4; }
 
 .card {
-  @apply rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-sm;
+  @apply rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))];
 }
 
 .badge {
-  @apply inline-flex items-center rounded-full border border-[hsl(var(--border))] bg-white px-2 py-0.5 text-xs text-[hsl(var(--muted))];
+  @apply inline-flex items-center gap-1 rounded-full border border-[hsl(var(--border))] bg-white px-2 py-0.5 text-xs text-[hsl(var(--muted))];
 }
+
+/* Tipografia “script” (sem dependência externa): usa fontes locais fallback */
+.font-script {
+  font-family: ui-serif, Georgia, "Times New Roman", serif;
+  font-style: italic;
+  letter-spacing: -0.02em;
+}
+
+/* Hover premium */
+.shadow-soft { box-shadow: 0 10px 30px rgba(20, 10, 5, 0.08); }
