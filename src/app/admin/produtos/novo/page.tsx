@@ -25,6 +25,12 @@ type VariantDraft = {
 
 type ImageDraft = { url: string; alt?: string; sortOrder: string };
 
+// Opções padronizadas
+const SIZE_OPTIONS = ["Pequeno", "Médio", "Grande", "Extra Grande"] as const;
+const FINISH_OPTIONS = ["Lisa", "Trabalhada", "Pintada", "Resinada"] as const;
+const COLOR_OPTIONS = ["Natural", "Marrom", "Preta", "Verde", "Personalizada"] as const;
+const PERSONAL_OPTIONS = ["Sim", "Não"] as const;
+
 export default function NovoProdutoPage() {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
@@ -61,7 +67,7 @@ export default function NovoProdutoPage() {
   function addVariant() {
     setVariants((v) => [
       ...v,
-      { sku: "", size: "", finish: "", color: "", personalization: "Não", priceCents: "0", compareAtCents: "", stock: "0", isActive: true },
+      { sku: "", size: "Médio", finish: "Lisa", color: "Marrom", personalization: "Não", priceCents: "0", compareAtCents: "", stock: "0", isActive: true },
     ]);
   }
 
@@ -234,6 +240,7 @@ export default function NovoProdutoPage() {
             {variants.map((v, idx) => (
               <div key={idx} className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--bg))] p-4">
                 <div className="grid gap-3 md:grid-cols-6">
+                  {/* SKU */}
                   <div className="md:col-span-2 space-y-2">
                     <Label>SKU</Label>
                     <Input value={v.sku} onChange={(e) => {
@@ -241,35 +248,92 @@ export default function NovoProdutoPage() {
                       setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, sku: val } : it)));
                     }} placeholder="CLZ-..." />
                   </div>
+
+                  {/* Tamanho - Select + Outro */}
                   <div className="space-y-2">
                     <Label>Tamanho</Label>
-                    <Input value={v.size || ""} onChange={(e) => {
-                      const val = e.target.value;
-                      setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, size: val } : it)));
-                    }} placeholder="Médio" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Acabamento</Label>
-                    <Input value={v.finish || ""} onChange={(e) => {
-                      const val = e.target.value;
-                      setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, finish: val } : it)));
-                    }} placeholder="Lisa" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Cor</Label>
-                    <Input value={v.color || ""} onChange={(e) => {
-                      const val = e.target.value;
-                      setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, color: val } : it)));
-                    }} placeholder="Marrom" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Personalização</Label>
-                    <Input value={v.personalization || ""} onChange={(e) => {
-                      const val = e.target.value;
-                      setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, personalization: val } : it)));
-                    }} placeholder="Sim/Não" />
+                    <select
+                      value={SIZE_OPTIONS.includes((v.size || "") as any) ? (v.size as any) : "Outro"}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, size: val === "Outro" ? "" : val } : it)));
+                      }}
+                      className="w-full rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 text-sm"
+                    >
+                      {SIZE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                      <option value="Outro">Outro</option>
+                    </select>
+                    {SIZE_OPTIONS.includes((v.size || "") as any) ? null : (
+                      <Input
+                        value={v.size || ""}
+                        onChange={(e) => setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, size: e.target.value } : it)))}
+                        placeholder="Digite outro tamanho"
+                      />
+                    )}
                   </div>
 
+                  {/* Acabamento - Select + Outro */}
+                  <div className="space-y-2">
+                    <Label>Acabamento</Label>
+                    <select
+                      value={FINISH_OPTIONS.includes((v.finish || "") as any) ? (v.finish as any) : "Outro"}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, finish: val === "Outro" ? "" : val } : it)));
+                      }}
+                      className="w-full rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 text-sm"
+                    >
+                      {FINISH_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                      <option value="Outro">Outro</option>
+                    </select>
+                    {FINISH_OPTIONS.includes((v.finish || "") as any) ? null : (
+                      <Input
+                        value={v.finish || ""}
+                        onChange={(e) => setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, finish: e.target.value } : it)))}
+                        placeholder="Digite outro acabamento"
+                      />
+                    )}
+                  </div>
+
+                  {/* Cor - Select + Outro */}
+                  <div className="space-y-2">
+                    <Label>Cor</Label>
+                    <select
+                      value={COLOR_OPTIONS.includes((v.color || "") as any) ? (v.color as any) : "Outro"}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, color: val === "Outro" ? "" : val } : it)));
+                      }}
+                      className="w-full rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 text-sm"
+                    >
+                      {COLOR_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                      <option value="Outro">Outro</option>
+                    </select>
+                    {COLOR_OPTIONS.includes((v.color || "") as any) ? null : (
+                      <Input
+                        value={v.color || ""}
+                        onChange={(e) => setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, color: e.target.value } : it)))}
+                        placeholder="Digite outra cor"
+                      />
+                    )}
+                  </div>
+
+                  {/* Personalização - Select simples */}
+                  <div className="space-y-2">
+                    <Label>Personalização</Label>
+                    <select
+                      value={(v.personalization || "Não") as any}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, personalization: val } : it)));
+                      }}
+                      className="w-full rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 text-sm"
+                    >
+                      {PERSONAL_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Preço */}
                   <div className="space-y-2">
                     <Label>Preço (cents)</Label>
                     <Input value={v.priceCents} onChange={(e) => {
@@ -277,6 +341,8 @@ export default function NovoProdutoPage() {
                       setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, priceCents: val } : it)));
                     }} inputMode="numeric" />
                   </div>
+
+                  {/* Preço promo */}
                   <div className="space-y-2">
                     <Label>Preço promo (cents)</Label>
                     <Input value={v.compareAtCents || ""} onChange={(e) => {
@@ -284,6 +350,8 @@ export default function NovoProdutoPage() {
                       setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, compareAtCents: val } : it)));
                     }} inputMode="numeric" placeholder="opcional" />
                   </div>
+
+                  {/* Estoque */}
                   <div className="space-y-2">
                     <Label>Estoque</Label>
                     <Input value={v.stock} onChange={(e) => {
@@ -291,6 +359,8 @@ export default function NovoProdutoPage() {
                       setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, stock: val } : it)));
                     }} inputMode="numeric" />
                   </div>
+
+                  {/* Ativa */}
                   <div className="space-y-2">
                     <Label>Ativa</Label>
                     <div className="flex items-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2">

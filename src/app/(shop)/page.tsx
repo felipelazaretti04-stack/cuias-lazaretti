@@ -4,10 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { SectionHeader } from "@/components/shop/SectionHeader";
 import { ProductCard } from "@/components/shop/ProductCard";
 import { getBestSellers } from "@/lib/bestSellers";
+import { HeroCarousel } from "@/components/shop/HeroCarousel";
+import { TrustBadges } from "@/components/shop/TrustBadges";
 
 export default async function HomePage() {
   const content = (await prisma.siteContent.findFirst())!;
-  const trust = (content?.trustBarJson as any[]) || [];
 
   const featured = await prisma.product.findMany({
     where: { isActive: true, isFeatured: true },
@@ -31,75 +32,39 @@ export default async function HomePage() {
 
   const best = await getBestSellers(6);
 
+  // Slides do carrossel
+  const slides = [
+    {
+      imageUrl: content.heroImageUrl,
+      badge: content.heroBadgeText,
+      title: content.heroTitle,
+      highlight: "premium",
+      subtitle: content.heroSubtitle,
+      primaryText: content.heroPrimaryButtonText,
+      primaryHref: content.heroPrimaryButtonLink,
+      secondaryText: content.heroSecondaryButtonText,
+      secondaryHref: content.heroSecondaryButtonLink,
+    },
+    {
+      imageUrl: content.institutionalImageUrl,
+      badge: "Personalização sob medida",
+      title: "Presente que vira",
+      highlight: "memória",
+      subtitle: "Escolhe a peça e descreve a personalização no checkout. Nós cuidamos do resto.",
+      primaryText: "Ver personalizáveis",
+      primaryHref: "/produtos?q=personaliz",
+      secondaryText: "Falar no WhatsApp",
+      secondaryHref: "/contato",
+    },
+  ];
+
   return (
     <div>
-      {/* HERO */}
-      <section className="container py-10">
-        <div className="card overflow-hidden">
-          <div className="grid gap-8 p-8 md:grid-cols-2 md:items-center">
-            <div>
-              <div className="badge">{content.heroBadgeText}</div>
-              <h1 className="mt-4 text-3xl font-semibold tracking-tight md:text-5xl">
-                {content.heroTitle}
-              </h1>
-              <p className="mt-3 text-sm text-[hsl(var(--muted))]">
-                {content.heroSubtitle}
-              </p>
-
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Link
-                  href={content.heroPrimaryButtonLink}
-                  className="inline-flex items-center justify-center rounded-xl bg-[hsl(var(--primary))] px-5 py-2.5 text-sm font-medium text-white hover:opacity-95"
-                >
-                  {content.heroPrimaryButtonText}
-                </Link>
-                <Link
-                  href={content.heroSecondaryButtonLink}
-                  className="inline-flex items-center justify-center rounded-xl border border-[hsl(var(--border))] bg-white px-5 py-2.5 text-sm font-medium hover:bg-[hsl(var(--accent))]"
-                >
-                  {content.heroSecondaryButtonText}
-                </Link>
-              </div>
-
-              <div className="mt-6 text-xs text-[hsl(var(--muted))]">
-                {content.scarcityText}
-              </div>
-            </div>
-
-            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--accent))]">
-              {content.heroImageUrl ? (
-                <Image
-                  src={content.heroImageUrl}
-                  alt="Hero"
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 1024px) 100vw, 50vw"
-                />
-              ) : (
-                <div className="absolute inset-0 bg-gradient-to-tr from-[hsl(var(--primary))]/12 via-transparent to-[hsl(var(--gold))]/10" />
-              )}
-              <div className="absolute bottom-4 left-4 right-4 rounded-2xl bg-white/85 p-4 backdrop-blur">
-                <div className="text-sm font-semibold">Premium, clean e feito pra durar.</div>
-                <div className="mt-1 text-xs text-[hsl(var(--muted))]">
-                  Envio Brasil • Retirada em Erechim/RS
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* TRUST BAR */}
-      <section className="container">
-        <div className="grid gap-3 md:grid-cols-4">
-          {trust.map((it, idx) => (
-            <div key={idx} className="rounded-2xl border border-[hsl(var(--border))] bg-white p-4">
-              <div className="text-sm font-semibold">{it.title}</div>
-              <div className="mt-1 text-xs text-[hsl(var(--muted))]">{it.desc}</div>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* HERO CARROSSEL */}
+      <HeroCarousel slides={slides} />
+      
+      {/* TRUST BADGES */}
+      <TrustBadges />
 
       {/* DESTAQUES */}
       <section className="container py-10">
@@ -161,7 +126,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* MAIS VENDIDOS REAL */}
+      {/* MAIS VENDIDOS */}
       <section className="container py-10">
         <SectionHeader title="Mais vendidos" subtitle="Os favoritos da roda de mate (com base em pedidos pagos)." href="/produtos" />
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -178,11 +143,11 @@ export default async function HomePage() {
             />
           ))}
         </div>
-        {best.length === 0 ? (
+        {best.length === 0 && (
           <div className="mt-4 text-xs text-[hsl(var(--muted))]">
             Ainda sem base de pedidos pagos. Assim que o webhook confirmar pagamentos, isso preenche automaticamente.
           </div>
-        ) : null}
+        )}
       </section>
     </div>
   );
