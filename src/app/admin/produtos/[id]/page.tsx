@@ -1,4 +1,3 @@
- 
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -27,27 +26,7 @@ type Variant = {
   size?: string | null;
   finish?: string | null;
   color?: string | null;
-  personalization?: string | null; // "Sim" | "Não" | null
-};
-
-type ProductPayload = {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string | null;
-  care?: string | null;
-
-  isActive: boolean;
-  isFeatured: boolean;
-  isNew: boolean;
-
-  isPersonalized: boolean;
-  productionDays: number;
-
-  categoryId?: string | null;
-
-  images: { url: string; alt?: string | null; sortOrder: number }[];
-  variants: Variant[];
+  personalization?: string | null; // "Sim" | "Não"
 };
 
 const SIZE_OPTIONS = ["Pequeno", "Médio", "Grande", "Extra Grande"] as const;
@@ -90,8 +69,6 @@ export default function AdminEditProductPage({ params }: { params: { id: string 
   const [newImageUrl, setNewImageUrl] = useState("");
   const [newImageAlt, setNewImageAlt] = useState("");
 
-  const hasVariants = variants.length > 0;
-
   async function load() {
     setLoading(true);
     setErr(null);
@@ -101,7 +78,8 @@ export default function AdminEditProductPage({ params }: { params: { id: string 
     setLoading(false);
 
     if (!res.ok) {
-      setErr("Falha ao carregar produto");
+      const data = await res.json().catch(() => null);
+      setErr(data?.error || "Falha ao carregar produto");
       return;
     }
 
@@ -141,21 +119,26 @@ export default function AdminEditProductPage({ params }: { params: { id: string 
       size: v.size ?? null,
       finish: v.finish ?? null,
       color: v.color ?? null,
-      personalization: v.personalization ?? null,
+      personalization: v.personalization ?? "Não",
     }));
-    setVariants(vars.length ? vars : [
-      {
-        sku: "",
-        priceCents: 0,
-        compareAtCents: null,
-        stock: 0,
-        isActive: true,
-        size: "Médio",
-        finish: "Lisa",
-        color: "Natural",
-        personalization: "Não",
-      },
-    ]);
+
+    setVariants(
+      vars.length
+        ? vars
+        : [
+            {
+              sku: "",
+              priceCents: 0,
+              compareAtCents: null,
+              stock: 0,
+              isActive: true,
+              size: "Médio",
+              finish: "Lisa",
+              color: "Natural",
+              personalization: "Não",
+            },
+          ]
+    );
   }
 
   useEffect(() => {
@@ -168,7 +151,6 @@ export default function AdminEditProductPage({ params }: { params: { id: string 
     if (!slug.trim()) return false;
     if (!variants.length) return false;
 
-    // sku e preço por variante
     for (const v of variants) {
       if (!v.sku.trim()) return false;
       if (!Number.isFinite(v.priceCents) || v.priceCents <= 0) return false;
@@ -212,7 +194,7 @@ export default function AdminEditProductPage({ params }: { params: { id: string 
     setErr(null);
     setOk(null);
 
-    const payload: Omit<ProductPayload, "id"> = {
+    const payload = {
       name: name.trim(),
       slug: slug.trim(),
       categoryId: categoryId || null,
@@ -230,13 +212,13 @@ export default function AdminEditProductPage({ params }: { params: { id: string 
       images: images.map((i) => ({
         url: i.url,
         alt: i.alt || null,
-        sortOrder: i.sortOrder ?? 0,
+        sortOrder: Number(i.sortOrder) || 0,
       })),
 
       variants: variants.map((v) => ({
         sku: v.sku.trim(),
         priceCents: Number(v.priceCents) || 0,
-        compareAtCents: v.compareAtCents != null && v.compareAtCents !== ("" as any) ? Number(v.compareAtCents) : null,
+        compareAtCents: v.compareAtCents == null ? null : Number(v.compareAtCents),
         stock: Number(v.stock) || 0,
         isActive: !!v.isActive,
 
@@ -271,7 +253,7 @@ export default function AdminEditProductPage({ params }: { params: { id: string 
         <div className="text-sm text-[hsl(var(--muted))]">Carregando...</div>
       ) : (
         <div className="grid gap-6">
-          {/* Campos principais */}
+          {/* Dados */}
           <div className="card p-5">
             <div className="text-sm font-semibold">Dados do produto</div>
 
@@ -358,7 +340,7 @@ export default function AdminEditProductPage({ params }: { params: { id: string 
               <div>
                 <div className="text-sm font-semibold">Imagens</div>
                 <div className="text-xs text-[hsl(var(--muted))]">
-                  Cole uma URL, selecione da galeria ou faça upload em “Mídias”.
+                  Cole uma URL ou selecione da galeria.
                 </div>
               </div>
               <MediaPicker onPick={(url) => addImage(url)} />
@@ -395,7 +377,7 @@ export default function AdminEditProductPage({ params }: { params: { id: string 
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={img.url} alt={img.alt || "img"} className="aspect-square w-full rounded-xl object-cover" />
                   <div className="mt-2 flex items-center justify-between gap-2">
-                    <div className="text-[11px] text-[hsl(var(--muted))]">ordem {img.sortOrder}</div>
+                    <div className="text-[11px] text-[hsl(var(--muted))]">ordem</div>
                     <button
                       type="button"
                       onClick={() => removeImage(idx)}
@@ -429,9 +411,7 @@ export default function AdminEditProductPage({ params }: { params: { id: string 
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold">Variantes</div>
-                <div className="text-xs text-[hsl(var(--muted))]">
-                  Padrões via select + opção “Outro” para agilizar.
-                </div>
+                <div className="text-xs text-[hsl(var(--muted))]">Select + “Outro” para padronizar.</div>
               </div>
               <Button type="button" variant="secondary" onClick={addVariant}>
                 Adicionar variante
@@ -459,7 +439,9 @@ export default function AdminEditProductPage({ params }: { params: { id: string 
                       <Label>SKU</Label>
                       <Input
                         value={v.sku}
-                        onChange={(e) => setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, sku: e.target.value } : it)))}
+                        onChange={(e) =>
+                          setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, sku: e.target.value } : it)))
+                        }
                         placeholder="SKU-001"
                       />
                     </div>
@@ -494,22 +476,17 @@ export default function AdminEditProductPage({ params }: { params: { id: string 
                       />
                     </div>
 
-                    {/* Selects padronizados */}
                     <div className="space-y-2">
                       <Label>Tamanho</Label>
                       <select
                         value={SIZE_OPTIONS.includes((v.size || "") as any) ? (v.size as any) : "Outro"}
                         onChange={(e) => {
                           const val = e.target.value;
-                          setVariants((arr) =>
-                            arr.map((it, i) => (i === idx ? { ...it, size: val === "Outro" ? "" : val } : it))
-                          );
+                          setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, size: val === "Outro" ? "" : val } : it)));
                         }}
                         className="w-full rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 text-sm"
                       >
-                        {SIZE_OPTIONS.map((o) => (
-                          <option key={o} value={o}>{o}</option>
-                        ))}
+                        {SIZE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
                         <option value="Outro">Outro</option>
                       </select>
                       {SIZE_OPTIONS.includes((v.size || "") as any) ? null : (
@@ -527,15 +504,11 @@ export default function AdminEditProductPage({ params }: { params: { id: string 
                         value={FINISH_OPTIONS.includes((v.finish || "") as any) ? (v.finish as any) : "Outro"}
                         onChange={(e) => {
                           const val = e.target.value;
-                          setVariants((arr) =>
-                            arr.map((it, i) => (i === idx ? { ...it, finish: val === "Outro" ? "" : val } : it))
-                          );
+                          setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, finish: val === "Outro" ? "" : val } : it)));
                         }}
                         className="w-full rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 text-sm"
                       >
-                        {FINISH_OPTIONS.map((o) => (
-                          <option key={o} value={o}>{o}</option>
-                        ))}
+                        {FINISH_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
                         <option value="Outro">Outro</option>
                       </select>
                       {FINISH_OPTIONS.includes((v.finish || "") as any) ? null : (
@@ -553,15 +526,11 @@ export default function AdminEditProductPage({ params }: { params: { id: string 
                         value={COLOR_OPTIONS.includes((v.color || "") as any) ? (v.color as any) : "Outro"}
                         onChange={(e) => {
                           const val = e.target.value;
-                          setVariants((arr) =>
-                            arr.map((it, i) => (i === idx ? { ...it, color: val === "Outro" ? "" : val } : it))
-                          );
+                          setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, color: val === "Outro" ? "" : val } : it)));
                         }}
                         className="w-full rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 text-sm"
                       >
-                        {COLOR_OPTIONS.map((o) => (
-                          <option key={o} value={o}>{o}</option>
-                        ))}
+                        {COLOR_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
                         <option value="Outro">Outro</option>
                       </select>
                       {COLOR_OPTIONS.includes((v.color || "") as any) ? null : (
@@ -584,9 +553,7 @@ export default function AdminEditProductPage({ params }: { params: { id: string 
                         }
                         className="w-full rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 text-sm"
                       >
-                        {PERSONAL_OPTIONS.map((o) => (
-                          <option key={o} value={o}>{o}</option>
-                        ))}
+                        {PERSONAL_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
                       </select>
                     </div>
 
@@ -607,42 +574,29 @@ export default function AdminEditProductPage({ params }: { params: { id: string 
                     </div>
 
                     <div className="space-y-2 md:col-span-3">
-                      <Label>Preço promocional (compareAtCents - opcional)</Label>
+                      <Label>CompareAt (centavos, opcional)</Label>
                       <Input
                         value={v.compareAtCents == null ? "" : String(v.compareAtCents)}
                         onChange={(e) =>
                           setVariants((arr) =>
-                            arr.map((it, i) =>
-                              i === idx ? { ...it, compareAtCents: e.target.value ? Number(e.target.value) : null } : it
-                            )
+                            arr.map((it, i) => (i === idx ? { ...it, compareAtCents: e.target.value ? Number(e.target.value) : null } : it))
                           )
                         }
                         inputMode="numeric"
                         placeholder="Ex.: 15990"
                       />
-                      <div className="text-[11px] text-[hsl(var(--muted))]">
-                        Se preenchido, mostra o preço “de” riscado no card.
-                      </div>
                     </div>
                   </div>
                 </div>
               ))}
-
-              {!hasVariants ? (
-                <div className="text-sm text-[hsl(var(--muted))]">Sem variantes.</div>
-              ) : null}
             </div>
           </div>
 
           {err ? (
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-              {err}
-            </div>
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{err}</div>
           ) : null}
           {ok ? (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-              {ok}
-            </div>
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">{ok}</div>
           ) : null}
 
           <div className="flex flex-wrap gap-2">
@@ -655,8 +609,7 @@ export default function AdminEditProductPage({ params }: { params: { id: string 
           </div>
 
           <div className="text-xs text-[hsl(var(--muted))]">
-            Observação: nesta versão simples, ao salvar nós substituímos imagens e variantes do produto (delete+create).
-            Como você ainda não tem pedidos com itens, está seguro.
+            Esta tela salva no modo simples: substitui imagens e variantes (delete+create).
           </div>
         </div>
       )}

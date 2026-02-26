@@ -1,4 +1,3 @@
- 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminSession } from "@/lib/auth";
@@ -10,6 +9,7 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
   if (session.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await ctx.params;
+
   const product = await prisma.product.findUnique({
     where: { id },
     include: {
@@ -17,6 +17,7 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
       variants: { orderBy: { createdAt: "asc" } },
     },
   });
+
   if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const categories = await prisma.category.findMany({
@@ -29,13 +30,11 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
 }
 
 const variantSchema = z.object({
-  id: z.string().optional().nullable(), // se existir, mantemos; se não, cria novo
   sku: z.string().min(2).max(80),
   priceCents: z.coerce.number().int().min(1),
   compareAtCents: z.coerce.number().int().optional().nullable(),
   stock: z.coerce.number().int().min(0),
   isActive: z.coerce.boolean().default(true),
-
   size: z.string().optional().nullable(),
   finish: z.string().optional().nullable(),
   color: z.string().optional().nullable(),
@@ -53,17 +52,14 @@ const schema = z.object({
   slug: z.string().min(2).max(160),
   description: z.string().optional().nullable(),
   care: z.string().optional().nullable(),
-
   isActive: z.coerce.boolean().default(true),
   isFeatured: z.coerce.boolean().default(false),
   isNew: z.coerce.boolean().default(false),
-
   isPersonalized: z.coerce.boolean().default(false),
   productionDays: z.coerce.number().int().min(0).max(60).default(0),
-
   categoryId: z.string().optional().nullable(),
   images: z.array(imageSchema).max(20).default([]),
-  variants: z.array(variantSchema).max(100).default([]),
+  variants: z.array(variantSchema).min(1).max(100),
 });
 
 export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -72,13 +68,15 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   if (session.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await ctx.params;
+
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Dados inválidos", issues: parsed.error.flatten() }, { status: 400 });
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Dados inválidos", issues: parsed.error.flatten() }, { status: 400 });
+  }
 
   try {
     const updated = await prisma.$transaction(async (tx) => {
-      // atualiza campos do produto
       const p = await tx.product.update({
         where: { id },
         data: {
@@ -95,7 +93,6 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
         },
       });
 
-      // substitui imagens (simples e consistente)
       await tx.productImage.deleteMany({ where: { productId: id } });
       if (parsed.data.images.length) {
         await tx.productImage.createMany({
@@ -108,33 +105,27 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
         });
       }
 
-      // substitui variantes
       await tx.variant.deleteMany({ where: { productId: id } });
-      if (parsed.data.variants.length) {
-        await tx.variant.createMany({
-          data: parsed.data.variants.map((v) => ({
-            productId: id,
-            sku: v.sku,
-            priceCents: v.priceCents,
-            compareAtCents: v.compareAtCents ?? null,
-            stock: v.stock,
-            isActive: v.isActive,
-            size: v.size ?? null,
-            finish: v.finish ?? null,
-            color: v.color ?? null,
-            personalization: v.personalization ?? null,
-          })),
-        });
-      }
+      await tx.variant.createMany({
+        data: parsed.data.variants.map((v) => ({
+          productId: id,
+          sku: v.sku,
+          priceCents: v.priceCents,
+          compareAtCents: v.compareAtCents ?? null,
+          stock: v.stock,
+          isActive: v.isActive,
+          size: v.size ?? null,
+          finish: v.finish ?? null,
+          color: v.color ?? null,
+          personalization: v.personalization ?? null,
+        })),
+      });
 
       return p;
     });
 
     return NextResponse.json({ ok: true, product: updated });
   } catch (e: any) {
-    return NextResponse.json(
-      { error: "Falha ao atualizar produto (verifique slug/SKU duplicados)" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Falha ao atualizar produto (slug/SKU pode estar duplicado)" }, { status: 400 });
   }
 }

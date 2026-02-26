@@ -8,7 +8,7 @@ export default async function AdminProdutosPage() {
     orderBy: [{ createdAt: "desc" }],
     include: {
       category: true,
-      variants: { orderBy: { priceCents: "asc" } },
+      variants: { where: { isActive: true }, orderBy: { priceCents: "asc" } },
     },
   });
 
@@ -16,7 +16,7 @@ export default async function AdminProdutosPage() {
     <AdminShell title="Produtos">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-[hsl(var(--muted))]">
-          Cadastre produtos, variantes e imagens (URL).
+          Cadastre produtos, variantes e imagens.
         </div>
 
         <Link
@@ -39,6 +39,7 @@ export default async function AdminProdutosPage() {
               <th className="text-right">Ações</th>
             </tr>
           </thead>
+
           <tbody>
             {products.map((p) => {
               const first = p.variants[0];
@@ -60,12 +61,19 @@ export default async function AdminProdutosPage() {
                 </tr>
               );
             })}
+            {products.length === 0 ? (
+              <tr>
+                <td className="py-4 text-sm text-[hsl(var(--muted))]" colSpan={6}>
+                  Sem produtos ainda.
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>
 
       <div className="mt-6 text-xs text-[hsl(var(--muted))]">
-        Agora você já pode editar produtos existentes (nome, slug, imagens e variantes) pelo botão <b>Editar</b>.
+        Dica: use <b>Mídias</b> para subir imagens no Cloudinary e reutilizar URLs nos produtos.
       </div>
     </AdminShell>
   );
