@@ -1,3 +1,5 @@
+import { orderStatusLabel } from "@/lib/orderStatus";
+
 export function StatusPill({ status }: { status: string }) {
   const s = status.toUpperCase();
   const cls =
@@ -8,7 +10,7 @@ export function StatusPill({ status }: { status: string }) {
 
   return (
     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs ${cls}`}>
-      {s}
+      {orderStatusLabel(status)}
     </span>
   );
 }

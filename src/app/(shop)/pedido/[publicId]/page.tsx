@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { formatBRL } from "@/lib/money";
 import { TrackEvent } from "@/components/shop/TrackEvent";
+import { orderStatusLabel } from "@/lib/orderStatus";
 
 export const dynamic = "force-dynamic";
 
@@ -17,11 +18,7 @@ export default async function PedidoPage({ params }: { params: Promise<{ publicI
   if (!order) return notFound();
 
   const isPaid = order.status === "PAID";
-
-  const statusLabel =
-    order.status === "PAID" ? "Pago" :
-    order.status === "SHIPPED" ? "Enviado" :
-    order.status === "CANCELLED" ? "Cancelado" : "Pendente";
+  const statusLabel = orderStatusLabel(order.status);
 
   return (
     <div className="container py-10">

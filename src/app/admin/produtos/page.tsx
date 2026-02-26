@@ -14,20 +14,21 @@ export default async function AdminProdutosPage() {
 
   return (
     <AdminShell title="Produtos">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-[hsl(var(--muted))]">
           Cadastre produtos, variantes e imagens (URL).
         </div>
+
         <Link
           href="/admin/produtos/novo"
-          className="rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-white"
+          className="inline-flex items-center justify-center rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-white"
         >
           Novo produto
         </Link>
       </div>
 
       <div className="mt-6 overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full min-w-[860px] text-sm">
           <thead>
             <tr className="text-left text-[hsl(var(--muted))]">
               <th className="py-2">Produto</th>
@@ -35,6 +36,7 @@ export default async function AdminProdutosPage() {
               <th>Status</th>
               <th>Preço (a partir de)</th>
               <th>Variantes</th>
+              <th className="text-right">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -47,6 +49,14 @@ export default async function AdminProdutosPage() {
                   <td>{p.isActive ? "Ativo" : "Inativo"}</td>
                   <td>{first ? formatBRL(first.priceCents) : "-"}</td>
                   <td>{p.variants.length}</td>
+                  <td className="text-right">
+                    <Link
+                      href={`/admin/produtos/${p.id}`}
+                      className="inline-flex items-center justify-center rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-1.5 text-xs hover:bg-[hsl(var(--accent))]"
+                    >
+                      Editar
+                    </Link>
+                  </td>
                 </tr>
               );
             })}
@@ -55,7 +65,7 @@ export default async function AdminProdutosPage() {
       </div>
 
       <div className="mt-6 text-xs text-[hsl(var(--muted))]">
-        Edição/remoção entra na fase 2 (mantendo MVP enxuto).
+        Agora você já pode editar produtos existentes (nome, slug, imagens e variantes) pelo botão <b>Editar</b>.
       </div>
     </AdminShell>
   );

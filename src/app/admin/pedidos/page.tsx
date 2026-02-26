@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { StatusPill } from "@/components/admin/StatusPill";
 import { formatBRL } from "@/lib/money";
-import { orderStatusLabel } from "@/lib/order-status";
+import { orderStatusLabel } from "@/lib/orderStatus";
 
 export default async function AdminPedidosPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const sp = await searchParams;
