@@ -15,9 +15,7 @@ export default async function AdminProdutosPage() {
   return (
     <AdminShell title="Produtos">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-sm text-[hsl(var(--muted))]">
-          Cadastre produtos, variantes e imagens.
-        </div>
+        <div className="text-sm text-[hsl(var(--muted))]">Cadastre produtos, variantes e imagens.</div>
 
         <Link
           href="/admin/produtos/novo"
@@ -61,6 +59,7 @@ export default async function AdminProdutosPage() {
                 </tr>
               );
             })}
+
             {products.length === 0 ? (
               <tr>
                 <td className="py-4 text-sm text-[hsl(var(--muted))]" colSpan={6}>

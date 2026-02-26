@@ -9,6 +9,7 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
   if (session.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await ctx.params;
+  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
   const product = await prisma.product.findUnique({
     where: { id },
@@ -68,6 +69,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   if (session.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await ctx.params;
+  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
@@ -125,7 +127,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     });
 
     return NextResponse.json({ ok: true, product: updated });
-  } catch (e: any) {
+  } catch {
     return NextResponse.json({ error: "Falha ao atualizar produto (slug/SKU pode estar duplicado)" }, { status: 400 });
   }
 }

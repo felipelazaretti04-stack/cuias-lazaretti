@@ -109,7 +109,7 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ ok: true, productId: product.id }, { status: 201 });
-  } catch (e: any) {
+  } catch {
     return NextResponse.json({ error: "Falha ao criar produto (slug/SKU pode estar duplicado)" }, { status: 400 });
   }
 }
