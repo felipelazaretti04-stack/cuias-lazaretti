@@ -39,7 +39,7 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
   }, [emblaApi]);
 
   return (
-    <section className="container py-10">
+    <section className="container py-6 md:py-10">
       <div className="card overflow-hidden shadow-soft">
         <div ref={emblaRef} className="overflow-hidden">
           <div className="flex">
@@ -47,7 +47,7 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
               <div key={i} className="min-w-0 flex-[0_0_100%]">
                 <div className="relative">
                   <div
-                    className="h-[420px] w-full bg-[hsl(var(--accent))] md:h-[520px]"
+                    className="h-[420px] w-full bg-[hsl(var(--accent))] md:h-[520px] xl:h-[560px]"
                     style={{
                       backgroundImage: s.imageUrl ? `url(${s.imageUrl})` : undefined,
                       backgroundSize: "cover",
