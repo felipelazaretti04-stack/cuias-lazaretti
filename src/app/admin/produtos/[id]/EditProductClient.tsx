@@ -17,17 +17,18 @@ type ProductImage = {
 };
 
 type Variant = {
+  id?: string; // Adiciona isso
   sku: string;
   priceCents: number;
   compareAtCents?: number | null;
   stock: number;
   isActive: boolean;
-
   size?: string | null;
   finish?: string | null;
   color?: string | null;
-  personalization?: string | null; // "Sim" | "Não"
+  personalization?: string | null;
 };
+
 
 const SIZE_OPTIONS = ["Pequeno", "Médio", "Grande", "Extra Grande"] as const;
 const FINISH_OPTIONS = ["Lisa", "Trabalhada", "Pintada", "Resinada"] as const;
@@ -110,6 +111,7 @@ export default function EditProductClient({ productId }: { productId: string }) 
     setImages(imgs);
 
     const vars: Variant[] = (p.variants || []).map((v: any) => ({
+      id: v.id, // Adiciona isso
       sku: v.sku,
       priceCents: v.priceCents,
       compareAtCents: v.compareAtCents ?? null,

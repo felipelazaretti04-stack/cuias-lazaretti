@@ -31,6 +31,7 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
 }
 
 const variantSchema = z.object({
+  id: z.string().optional(), // Se tiver id, é update; se não, é create
   sku: z.string().min(2).max(80),
   priceCents: z.coerce.number().int().min(1),
   compareAtCents: z.coerce.number().int().optional().nullable(),
@@ -79,6 +80,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
 
   try {
     const updated = await prisma.$transaction(async (tx) => {
+      // 1. Atualiza o produto
       const p = await tx.product.update({
         where: { id },
         data: {
@@ -95,6 +97,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
         },
       });
 
+      // 2. Imagens: pode deletar e recriar (não tem FK com pedidos)
       await tx.productImage.deleteMany({ where: { productId: id } });
       if (parsed.data.images.length) {
         await tx.productImage.createMany({
@@ -107,10 +110,37 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
         });
       }
 
-      await tx.variant.deleteMany({ where: { productId: id } });
-      await tx.variant.createMany({
-        data: parsed.data.variants.map((v) => ({
-          productId: id,
+      // 3. Variantes: upsert para não quebrar FK
+      const variantIds = parsed.data.variants
+        .map((v) => v.id)
+        .filter((vid): vid is string => !!vid);
+
+      // Deleta variantes que foram removidas (só se não tiverem pedidos)
+      const existingVariants = await tx.variant.findMany({
+        where: { productId: id },
+        select: { id: true },
+      });
+
+      const toDelete = existingVariants
+        .filter((v) => !variantIds.includes(v.id))
+        .map((v) => v.id);
+
+      // Tenta deletar variantes removidas (ignora se tiver FK)
+      for (const vid of toDelete) {
+        try {
+          await tx.variant.delete({ where: { id: vid } });
+        } catch {
+          // Variante tem pedidos vinculados, apenas desativa
+          await tx.variant.update({
+            where: { id: vid },
+            data: { isActive: false },
+          });
+        }
+      }
+
+      // Upsert das variantes
+      for (const v of parsed.data.variants) {
+        const variantData = {
           sku: v.sku,
           priceCents: v.priceCents,
           compareAtCents: v.compareAtCents ?? null,
@@ -120,14 +150,31 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
           finish: v.finish ?? null,
           color: v.color ?? null,
           personalization: v.personalization ?? null,
-        })),
-      });
+        };
+
+        if (v.id) {
+          // Update existente
+          await tx.variant.update({
+            where: { id: v.id },
+            data: variantData,
+          });
+        } else {
+          // Cria nova
+          await tx.variant.create({
+            data: {
+              ...variantData,
+              productId: id,
+            },
+          });
+        }
+      }
 
       return p;
     });
 
     return NextResponse.json({ ok: true, product: updated });
-  } catch {
-    return NextResponse.json({ error: "Falha ao atualizar produto (slug/SKU pode estar duplicado)" }, { status: 400 });
+  } catch (err) {
+    console.error("Erro ao atualizar produto:", err);
+    return NextResponse.json({ error: "Falha ao atualizar produto" }, { status: 400 });
   }
 }
