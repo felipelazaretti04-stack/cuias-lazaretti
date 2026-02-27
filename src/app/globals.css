@@ -18,7 +18,13 @@
 }
 
 html, body { height: 100%; }
-body { background: hsl(var(--bg)); color: hsl(var(--fg)); }
+/* fundo com textura suave (sem imagem) */
+body {
+  background:
+    radial-gradient(1200px 500px at 20% -10%, rgba(185, 135, 60, 0.14), transparent 60%),
+    radial-gradient(900px 500px at 110% 10%, rgba(45, 90, 60, 0.10), transparent 55%),
+    hsl(var(--bg));
+}
 
 .container { @apply mx-auto w-full max-w-6xl px-4; }
 
