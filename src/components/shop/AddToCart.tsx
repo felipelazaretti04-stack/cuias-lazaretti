@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { track } from "@/lib/analytics";
 
 export function AddToCart({ variants }: { variants: Array<{ id: string; label: string; priceBRL: string; stock: number }> }) {
   const [variantId, setVariantId] = useState(variants[0]?.id || "");
@@ -17,7 +18,7 @@ export function AddToCart({ variants }: { variants: Array<{ id: string; label: s
     });
 
     if (res.ok) {
-      // recarrega pra atualizar badge/drawer simples (sem state global)
+      track("AddToCart", { content_type: "product", content_ids: [variantId], value: 0, currency: "BRL" });
       window.location.href = "/carrinho";
       return;
     }

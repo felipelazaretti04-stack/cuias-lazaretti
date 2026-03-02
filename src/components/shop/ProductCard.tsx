@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Price } from "./Price";
+import { RatingStars } from "@/components/shop/RatingStars";
 
 type Props = {
   slug: string;
@@ -10,34 +11,44 @@ type Props = {
   isFeatured?: boolean;
   fromPriceCents: number;
   fromCompareAtCents?: number | null;
+  ratingAvg?: number;
+  ratingCount?: number;
 };
 
 export function ProductCard(props: Props) {
   return (
     <Link href={`/produtos/${props.slug}`} className="group">
-      <div className="card overflow-hidden">
+      <div className="card overflow-hidden shadow-sm transition hover:shadow-soft">
         <div className="relative aspect-[4/3] w-full bg-[hsl(var(--accent))]">
           {props.imageUrl ? (
             <Image
               src={props.imageUrl}
               alt={props.name}
               fill
-              className="object-cover transition duration-300 group-hover:scale-[1.02]"
+              className="object-cover transition duration-500 group-hover:scale-[1.03]"
               sizes="(max-width: 768px) 100vw, 33vw"
             />
           ) : null}
+
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 transition group-hover:opacity-100" />
+
           <div className="absolute left-3 top-3 flex gap-2">
             {props.isNew ? <span className="badge">Novidade</span> : null}
             {props.isFeatured ? <span className="badge">Destaque</span> : null}
           </div>
         </div>
+
         <div className="p-4">
           <div className="text-sm font-semibold">{props.name}</div>
           <div className="mt-2">
+            <RatingStars value={props.ratingAvg || 0} count={props.ratingCount || 0} />
+          </div>
+          <div className="mt-2">
             <Price priceCents={props.fromPriceCents} compareAtCents={props.fromCompareAtCents} />
           </div>
-          <div className="mt-3 text-xs text-[hsl(var(--muted))]">
-            Ver detalhes →
+
+          <div className="mt-3 inline-flex text-xs text-[hsl(var(--muted))]">
+            Ver detalhes <span className="ml-1 transition group-hover:translate-x-0.5">→</span>
           </div>
         </div>
       </div>

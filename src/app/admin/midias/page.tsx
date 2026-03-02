@@ -1,6 +1,10 @@
 import { AdminShell } from "@/components/admin/AdminShell";
 import { ImageUploader } from "@/components/admin/ImageUploader";
 import { prisma } from "@/lib/prisma";
+<<<<<<< HEAD
+=======
+import { DeleteMediaButton } from "@/components/admin/DeleteMediaButton";
+>>>>>>> 8cb04a5a8bf609eab8837c3e974c3b76f2d53f0e
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +30,11 @@ export default async function AdminMidiasPage() {
                 <div className="mt-2 truncate text-[11px] text-[hsl(var(--muted))]" title={a.url}>
                   {a.alt || "—"}
                 </div>
+<<<<<<< HEAD
+=======
+
+                <DeleteMediaButton assetId={a.id} />
+>>>>>>> 8cb04a5a8bf609eab8837c3e974c3b76f2d53f0e
               </div>
             ))}
           </div>

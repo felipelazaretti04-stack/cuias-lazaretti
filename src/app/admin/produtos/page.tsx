@@ -2,32 +2,32 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { formatBRL } from "@/lib/money";
+import { DeleteProductButton } from "@/components/admin/DeleteProductButton";
 
 export default async function AdminProdutosPage() {
   const products = await prisma.product.findMany({
     orderBy: [{ createdAt: "desc" }],
     include: {
       category: true,
-      variants: { orderBy: { priceCents: "asc" } },
+      variants: { where: { isActive: true }, orderBy: { priceCents: "asc" } },
     },
   });
 
   return (
     <AdminShell title="Produtos">
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-[hsl(var(--muted))]">
-          Cadastre produtos, variantes e imagens (URL).
-        </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-sm text-[hsl(var(--muted))]">Cadastre produtos, variantes e imagens.</div>
+
         <Link
           href="/admin/produtos/novo"
-          className="rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-white"
+          className="inline-flex items-center justify-center rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-white"
         >
           Novo produto
         </Link>
       </div>
 
       <div className="mt-6 overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full min-w-[940px] text-sm">
           <thead>
             <tr className="text-left text-[hsl(var(--muted))]">
               <th className="py-2">Produto</th>
@@ -35,8 +35,10 @@ export default async function AdminProdutosPage() {
               <th>Status</th>
               <th>Preço (a partir de)</th>
               <th>Variantes</th>
+              <th className="text-right">Ações</th>
             </tr>
           </thead>
+
           <tbody>
             {products.map((p) => {
               const first = p.variants[0];
@@ -47,15 +49,30 @@ export default async function AdminProdutosPage() {
                   <td>{p.isActive ? "Ativo" : "Inativo"}</td>
                   <td>{first ? formatBRL(first.priceCents) : "-"}</td>
                   <td>{p.variants.length}</td>
+                  <td className="text-right">
+                    <div className="inline-flex items-center gap-2">
+                      <Link
+                        href={`/admin/produtos/${p.id}`}
+                        className="inline-flex items-center justify-center rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-1.5 text-xs hover:bg-[hsl(var(--accent))]"
+                      >
+                        Editar
+                      </Link>
+                      <DeleteProductButton productId={p.id} />
+                    </div>
+                  </td>
                 </tr>
               );
             })}
+
+            {products.length === 0 ? (
+              <tr>
+                <td className="py-4 text-sm text-[hsl(var(--muted))]" colSpan={6}>
+                  Sem produtos ainda.
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
-      </div>
-
-      <div className="mt-6 text-xs text-[hsl(var(--muted))]">
-        Edição/remoção entra na fase 2 (mantendo MVP enxuto).
       </div>
     </AdminShell>
   );

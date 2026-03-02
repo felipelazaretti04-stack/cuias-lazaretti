@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { destroyAdminSession } from "@/lib/auth";
 
-export async function POST() {
+export async function POST(req: Request) {
   await destroyAdminSession();
-  return NextResponse.json({ ok: true });
+
+  const url = new URL(req.url);
+  // redireciona para Home, mantendo origem correta (dev/prod)
+  return NextResponse.redirect(new URL("/", url.origin), { status: 303 });
 }

@@ -1,107 +1,153 @@
 import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
-import { SectionHeader } from "@/components/shop/SectionHeader";
-import { ProductCard } from "@/components/shop/ProductCard";
 import { getBestSellers } from "@/lib/bestSellers";
+import { HeroCarousel } from "@/components/shop/HeroCarousel";
+import { TrustBadges } from "@/components/shop/TrustBadges";
+import { ProductRail } from "@/components/shop/ProductRail";
+import { SectionShell } from "@/components/shop/SectionShell";
 
 export default async function HomePage() {
   const content = (await prisma.siteContent.findFirst())!;
-  const trust = (content?.trustBarJson as any[]) || [];
 
   const featured = await prisma.product.findMany({
     where: { isActive: true, isFeatured: true },
     orderBy: { createdAt: "desc" },
-    take: 6,
+    take: 8,
     include: {
       images: { orderBy: { sortOrder: "asc" }, take: 1 },
       variants: { where: { isActive: true }, orderBy: { priceCents: "asc" }, take: 1 },
+      reviews: { where: { approved: true }, select: { rating: true } },
     },
   });
 
   const newest = await prisma.product.findMany({
     where: { isActive: true, isNew: true },
     orderBy: { createdAt: "desc" },
-    take: 6,
+    take: 8,
     include: {
       images: { orderBy: { sortOrder: "asc" }, take: 1 },
       variants: { where: { isActive: true }, orderBy: { priceCents: "asc" }, take: 1 },
+      reviews: { where: { approved: true }, select: { rating: true } },
     },
   });
 
-  const best = await getBestSellers(6);
+  const best = await getBestSellers(8);
+
+  // Função para mapear produtos pro formato do Rail
+  function mapToRail(products: typeof featured) {
+    return products
+      .map((p) => {
+        const v = p.variants[0];
+        if (!v) return null;
+
+        const ratingCount = p.reviews?.length ?? 0;
+        const ratingAvg =
+          ratingCount > 0
+            ? p.reviews.reduce((acc, r) => acc + r.rating, 0) / ratingCount
+            : 0;
+
+        return {
+          id: p.id,
+          slug: p.slug,
+          name: p.name,
+          imageUrl: p.images[0]?.url ?? null,
+          fromPriceCents: v.priceCents,
+          fromCompareAtCents: v.compareAtCents ?? null,
+          isNew: p.isNew,
+          isFeatured: p.isFeatured,
+          ratingAvg,
+          ratingCount,
+        };
+      })
+      .filter(Boolean) as {
+        id: string;
+        slug: string;
+        name: string;
+        imageUrl: string | null;
+        fromPriceCents: number;
+        fromCompareAtCents: number | null;
+        isNew: boolean;
+        isFeatured: boolean;
+        ratingAvg: number;
+        ratingCount: number;
+      }[];
+  }
+
+  // Mapeia best sellers (estrutura pode ser diferente)
+  function mapBestToRail(products: typeof best) {
+    return products
+      .map((p) => {
+        const v = p.variants[0];
+        if (!v) return null;
+
+        return {
+          id: p.id,
+          slug: p.slug,
+          name: p.name,
+          imageUrl: p.images[0]?.url ?? null,
+          fromPriceCents: v.priceCents,
+          fromCompareAtCents: v.compareAtCents ?? null,
+          isNew: p.isNew,
+          isFeatured: p.isFeatured,
+          ratingAvg: 0,
+          ratingCount: 0,
+        };
+      })
+      .filter(Boolean) as {
+        id: string;
+        slug: string;
+        name: string;
+        imageUrl: string | null;
+        fromPriceCents: number;
+        fromCompareAtCents: number | null;
+        isNew: boolean;
+        isFeatured: boolean;
+        ratingAvg: number;
+        ratingCount: number;
+      }[];
+  }
+
+  const featuredUi = mapToRail(featured);
+  const newestUi = mapToRail(newest);
+  const bestUi = mapBestToRail(best);
+
+  // Slides do carrossel
+  const slides = [
+    {
+      imageUrl: content.heroImageUrl,
+      badge: content.heroBadgeText,
+      title: content.heroTitle,
+      highlight: "premium",
+      subtitle: content.heroSubtitle,
+      primaryText: content.heroPrimaryButtonText,
+      primaryHref: content.heroPrimaryButtonLink,
+      secondaryText: content.heroSecondaryButtonText,
+      secondaryHref: content.heroSecondaryButtonLink,
+    },
+    {
+      imageUrl: content.institutionalImageUrl,
+      badge: "Personalização sob medida",
+      title: "Presente que vira",
+      highlight: "memória",
+      subtitle: "Escolhe a peça e descreve a personalização no checkout. Nós cuidamos do resto.",
+      primaryText: "Ver personalizáveis",
+      primaryHref: "/produtos?q=personaliz",
+      secondaryText: "Falar no WhatsApp",
+      secondaryHref: "/contato",
+    },
+  ];
 
   return (
     <div>
-      {/* HERO */}
-      <section className="container py-10">
-        <div className="card overflow-hidden">
-          <div className="grid gap-8 p-8 md:grid-cols-2 md:items-center">
-            <div>
-              <div className="badge">{content.heroBadgeText}</div>
-              <h1 className="mt-4 text-3xl font-semibold tracking-tight md:text-5xl">
-                {content.heroTitle}
-              </h1>
-              <p className="mt-3 text-sm text-[hsl(var(--muted))]">
-                {content.heroSubtitle}
-              </p>
+      {/* HERO CARROSSEL */}
+      <HeroCarousel slides={slides} />
 
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Link
-                  href={content.heroPrimaryButtonLink}
-                  className="inline-flex items-center justify-center rounded-xl bg-[hsl(var(--primary))] px-5 py-2.5 text-sm font-medium text-white hover:opacity-95"
-                >
-                  {content.heroPrimaryButtonText}
-                </Link>
-                <Link
-                  href={content.heroSecondaryButtonLink}
-                  className="inline-flex items-center justify-center rounded-xl border border-[hsl(var(--border))] bg-white px-5 py-2.5 text-sm font-medium hover:bg-[hsl(var(--accent))]"
-                >
-                  {content.heroSecondaryButtonText}
-                </Link>
-              </div>
-
-              <div className="mt-6 text-xs text-[hsl(var(--muted))]">
-                {content.scarcityText}
-              </div>
-            </div>
-
-            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--accent))]">
-              {content.heroImageUrl ? (
-                <Image
-                  src={content.heroImageUrl}
-                  alt="Hero"
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 1024px) 100vw, 50vw"
-                />
-              ) : (
-                <div className="absolute inset-0 bg-gradient-to-tr from-[hsl(var(--primary))]/12 via-transparent to-[hsl(var(--gold))]/10" />
-              )}
-              <div className="absolute bottom-4 left-4 right-4 rounded-2xl bg-white/85 p-4 backdrop-blur">
-                <div className="text-sm font-semibold">Premium, clean e feito pra durar.</div>
-                <div className="mt-1 text-xs text-[hsl(var(--muted))]">
-                  Envio Brasil • Retirada em Erechim/RS
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* TRUST BAR */}
-      <section className="container">
-        <div className="grid gap-3 md:grid-cols-4">
-          {trust.map((it, idx) => (
-            <div key={idx} className="rounded-2xl border border-[hsl(var(--border))] bg-white p-4">
-              <div className="text-sm font-semibold">{it.title}</div>
-              <div className="mt-1 text-xs text-[hsl(var(--muted))]">{it.desc}</div>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* TRUST BADGES */}
+      <TrustBadges />
 
       {/* DESTAQUES */}
+<<<<<<< HEAD
       <section className="container py-10">
         <SectionHeader title="Destaques" subtitle="Peças com estética premium e acabamento impecável." href="/produtos" />
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -119,9 +165,19 @@ export default async function HomePage() {
           )}
         </div>
       </section>
+=======
+      <SectionShell tone="accent">
+        <ProductRail
+          title="Destaques da semana"
+          subtitle="Peças premium com acabamento caprichado."
+          hrefAll="/produtos?featured=1"
+          products={featuredUi}
+        />
+      </SectionShell>
+>>>>>>> 8cb04a5a8bf609eab8837c3e974c3b76f2d53f0e
 
       {/* INSTITUCIONAL */}
-      <section className="container py-2">
+      <section className="container py-10">
         <div className="card p-8">
           <div className="grid gap-6 md:grid-cols-2 md:items-center">
             <div>
@@ -133,7 +189,13 @@ export default async function HomePage() {
 
             <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--accent))]">
               {content.institutionalImageUrl ? (
-                <Image src={content.institutionalImageUrl} alt="Institucional" fill className="object-cover" sizes="50vw" />
+                <Image
+                  src={content.institutionalImageUrl}
+                  alt="Institucional"
+                  fill
+                  className="object-cover"
+                  sizes="50vw"
+                />
               ) : (
                 <div className="absolute inset-0 bg-gradient-to-tr from-[hsl(var(--gold))]/12 via-transparent to-[hsl(var(--primary))]/10" />
               )}
@@ -143,6 +205,7 @@ export default async function HomePage() {
       </section>
 
       {/* NOVIDADES */}
+<<<<<<< HEAD
       <section className="container py-10">
         <SectionHeader title="Novidades" subtitle="Lançamentos e reposições." href="/produtos" />
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -180,10 +243,34 @@ export default async function HomePage() {
         </div>
         {best.length === 0 ? (
           <div className="mt-4 text-xs text-[hsl(var(--muted))]">
+=======
+      <SectionShell tone="light">
+        <ProductRail
+          title="Novidades"
+          subtitle="Lançamentos e reposições fresquinhas."
+          hrefAll="/produtos?new=1"
+          products={newestUi}
+        />
+      </SectionShell>
+
+      {/* MAIS VENDIDOS */}
+      <SectionShell tone="accent">
+        <ProductRail
+          title="Mais vendidos"
+          subtitle="Os favoritos da roda de mate."
+          hrefAll="/produtos"
+          products={bestUi}
+        />
+      </SectionShell>
+
+      {bestUi.length === 0 && (
+        <div className="container pb-10">
+          <div className="text-center text-xs text-[hsl(var(--muted))]">
+>>>>>>> 8cb04a5a8bf609eab8837c3e974c3b76f2d53f0e
             Ainda sem base de pedidos pagos. Assim que o webhook confirmar pagamentos, isso preenche automaticamente.
           </div>
-        ) : null}
-      </section>
+        </div>
+      )}
     </div>
   );
 }

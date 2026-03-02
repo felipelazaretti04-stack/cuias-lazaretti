@@ -11,7 +11,19 @@ export async function GET(_: Request, ctx: { params: Promise<{ publicId: string 
   const { publicId } = await ctx.params;
   const order = await prisma.order.findUnique({
     where: { publicId },
-    include: { items: true, customer: true, paymentEvents: { orderBy: { receivedAt: "desc" }, take: 20 } },
+    include: {
+      customer: true,
+      items: {
+        include: {
+          variant: {
+            include: {
+              product: true,
+            },
+          },
+        },
+      },
+      paymentEvents: { orderBy: { receivedAt: "desc" }, take: 20 },
+    },
   });
   if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
