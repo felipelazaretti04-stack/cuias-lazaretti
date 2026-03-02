@@ -178,3 +178,34 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     return NextResponse.json({ error: "Falha ao atualizar produto" }, { status: 400 });
   }
 }
+export async function DELETE(_: Request, ctx: { params: Promise<{ id: string }> }) {
+  const session = await getAdminSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (session.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const { id } = await ctx.params;
+  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+
+  // tem pedido ligado a alguma variante deste produto?
+  const hasOrderItem = await prisma.orderItem.findFirst({
+    where: { variant: { productId: id } },
+    select: { id: true },
+  });
+
+  if (hasOrderItem) {
+    await prisma.product.update({
+      where: { id },
+      data: { isActive: false },
+    });
+    return NextResponse.json({ ok: true, deactivated: true });
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.productImage.deleteMany({ where: { productId: id } });
+    await tx.variant.deleteMany({ where: { productId: id } });
+    await tx.product.delete({ where: { id } });
+  });
+
+  return NextResponse.json({ ok: true, deleted: true });
+}
+

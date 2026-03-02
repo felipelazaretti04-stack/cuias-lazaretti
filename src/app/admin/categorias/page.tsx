@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { DeleteCategoryButton } from "@/components/admin/DeleteCategoryButton";
 
 export default async function AdminCategoriasPage() {
   const categories = await prisma.category.findMany({
@@ -20,12 +21,12 @@ export default async function AdminCategoriasPage() {
       </div>
 
       <div className="mt-6 overflow-x-auto">
-        <table className="w-full min-w-[720px] text-sm">
+        <table className="w-full min-w-[860px] text-sm">
           <thead>
             <tr className="text-left text-[hsl(var(--muted))]">
               <th className="py-2">Nome</th>
               <th>Slug</th>
-              <th>Ativa</th>
+              <th>Status</th>
               <th>Ordem</th>
               <th className="text-right">Ações</th>
             </tr>
@@ -35,24 +36,40 @@ export default async function AdminCategoriasPage() {
               <tr key={c.id} className="border-t border-[hsl(var(--border))]">
                 <td className="py-3 font-medium">{c.name}</td>
                 <td className="text-[hsl(var(--muted))]">{c.slug}</td>
-                <td>{c.isActive ? "Sim" : "Não"}</td>
+                <td>
+                  {c.isActive ? (
+                    <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-900">
+                      Ativa
+                    </span>
+                  ) : (
+                    <span className="inline-flex rounded-full border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-900">
+                      Inativa
+                    </span>
+                  )}
+                </td>
                 <td>{c.sortOrder}</td>
                 <td className="text-right">
-                  <Link
-                    href={`/admin/categorias/${c.id}`}
-                    className="inline-flex items-center justify-center rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-1.5 text-xs hover:bg-[hsl(var(--accent))]"
-                  >
-                    Editar
-                  </Link>
+                  <div className="inline-flex items-center gap-2">
+                    <Link
+                      href={`/admin/categorias/${c.id}`}
+                      className="inline-flex items-center justify-center rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-1.5 text-xs hover:bg-[hsl(var(--accent))]"
+                    >
+                      Editar
+                    </Link>
+                    <DeleteCategoryButton categoryId={c.id} />
+                  </div>
                 </td>
               </tr>
             ))}
+            {categories.length === 0 ? (
+              <tr>
+                <td className="py-4 text-sm text-[hsl(var(--muted))]" colSpan={5}>
+                  Sem categorias ainda.
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
-      </div>
-
-      <div className="mt-6 text-xs text-[hsl(var(--muted))]">
-        Agora você já pode editar categorias existentes pelo botão <b>Editar</b>.
       </div>
     </AdminShell>
   );

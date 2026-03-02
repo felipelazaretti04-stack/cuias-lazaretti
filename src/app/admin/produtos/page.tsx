@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { formatBRL } from "@/lib/money";
+import { DeleteProductButton } from "@/components/admin/DeleteProductButton";
 
 export default async function AdminProdutosPage() {
   const products = await prisma.product.findMany({
@@ -26,7 +27,7 @@ export default async function AdminProdutosPage() {
       </div>
 
       <div className="mt-6 overflow-x-auto">
-        <table className="w-full min-w-[860px] text-sm">
+        <table className="w-full min-w-[940px] text-sm">
           <thead>
             <tr className="text-left text-[hsl(var(--muted))]">
               <th className="py-2">Produto</th>
@@ -49,12 +50,15 @@ export default async function AdminProdutosPage() {
                   <td>{first ? formatBRL(first.priceCents) : "-"}</td>
                   <td>{p.variants.length}</td>
                   <td className="text-right">
-                    <Link
-                      href={`/admin/produtos/${p.id}`}
-                      className="inline-flex items-center justify-center rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-1.5 text-xs hover:bg-[hsl(var(--accent))]"
-                    >
-                      Editar
-                    </Link>
+                    <div className="inline-flex items-center gap-2">
+                      <Link
+                        href={`/admin/produtos/${p.id}`}
+                        className="inline-flex items-center justify-center rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-1.5 text-xs hover:bg-[hsl(var(--accent))]"
+                      >
+                        Editar
+                      </Link>
+                      <DeleteProductButton productId={p.id} />
+                    </div>
                   </td>
                 </tr>
               );
@@ -69,10 +73,6 @@ export default async function AdminProdutosPage() {
             ) : null}
           </tbody>
         </table>
-      </div>
-
-      <div className="mt-6 text-xs text-[hsl(var(--muted))]">
-        Dica: use <b>Mídias</b> para subir imagens no Cloudinary e reutilizar URLs nos produtos.
       </div>
     </AdminShell>
   );

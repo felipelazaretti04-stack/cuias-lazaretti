@@ -47,3 +47,22 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     return NextResponse.json({ error: "Falha ao atualizar (slug pode estar duplicado)" }, { status: 400 });
   }
 }
+export async function DELETE(_: Request, ctx: { params: Promise<{ id: string }> }) {
+  const session = await getAdminSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (session.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const { id } = await ctx.params;
+
+  const linked = await prisma.product.count({ where: { categoryId: id } });
+  if (linked > 0) {
+    return NextResponse.json(
+      { error: "Não é possível excluir: existem produtos vinculados a esta categoria." },
+      { status: 400 }
+    );
+  }
+
+  await prisma.category.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
+}
+

@@ -57,7 +57,7 @@ export function ProductRail({
   if (!products?.length) return null;
 
   return (
-    <section className="mt-8">
+    <section className="container mt-10">
       <div className="flex items-end justify-between gap-4">
         <div>
           <h2 className="text-base font-semibold tracking-tight">{title}</h2>
