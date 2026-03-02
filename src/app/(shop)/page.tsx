@@ -34,7 +34,6 @@ export default async function HomePage() {
 
   const best = await getBestSellers(8);
 
-  // Função para mapear produtos pro formato do Rail
   function mapToRail(products: typeof featured) {
     return products
       .map((p) => {
@@ -74,7 +73,6 @@ export default async function HomePage() {
       }[];
   }
 
-  // Mapeia best sellers (estrutura pode ser diferente)
   function mapBestToRail(products: typeof best) {
     return products
       .map((p) => {
@@ -112,7 +110,6 @@ export default async function HomePage() {
   const newestUi = mapToRail(newest);
   const bestUi = mapBestToRail(best);
 
-  // Slides do carrossel
   const slides = [
     {
       imageUrl: content.heroImageUrl,
@@ -140,32 +137,9 @@ export default async function HomePage() {
 
   return (
     <div>
-      {/* HERO CARROSSEL */}
       <HeroCarousel slides={slides} />
-
-      {/* TRUST BADGES */}
       <TrustBadges />
 
-      {/* DESTAQUES */}
-<<<<<<< HEAD
-      <section className="container py-10">
-        <SectionHeader title="Destaques" subtitle="Peças com estética premium e acabamento impecável." href="/produtos" />
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {featured.map((p: (typeof featured)[number]) =>
-            <ProductCard
-              key={p.id}
-              slug={p.slug}
-              name={p.name}
-              imageUrl={p.images[0]?.url ?? null}
-              isFeatured={p.isFeatured}
-              isNew={p.isNew}
-              fromPriceCents={p.variants[0]?.priceCents ?? 0}
-              fromCompareAtCents={p.variants[0]?.compareAtCents ?? null}
-            />
-          )}
-        </div>
-      </section>
-=======
       <SectionShell tone="accent">
         <ProductRail
           title="Destaques da semana"
@@ -174,9 +148,7 @@ export default async function HomePage() {
           products={featuredUi}
         />
       </SectionShell>
->>>>>>> 8cb04a5a8bf609eab8837c3e974c3b76f2d53f0e
 
-      {/* INSTITUCIONAL */}
       <section className="container py-10">
         <div className="card p-8">
           <div className="grid gap-6 md:grid-cols-2 md:items-center">
@@ -204,46 +176,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* NOVIDADES */}
-<<<<<<< HEAD
-      <section className="container py-10">
-        <SectionHeader title="Novidades" subtitle="Lançamentos e reposições." href="/produtos" />
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {newest.map((p: (typeof newest)[number]) =>
-            <ProductCard
-              key={p.id}
-              slug={p.slug}
-              name={p.name}
-              imageUrl={p.images[0]?.url ?? null}
-              isFeatured={p.isFeatured}
-              isNew={p.isNew}
-              fromPriceCents={p.variants[0]?.priceCents ?? 0}
-              fromCompareAtCents={p.variants[0]?.compareAtCents ?? null}
-            />
-          )}
-        </div>
-      </section>
-
-      {/* MAIS VENDIDOS REAL */}
-      <section className="container py-10">
-        <SectionHeader title="Mais vendidos" subtitle="Os favoritos da roda de mate (com base em pedidos pagos)." href="/produtos" />
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {best.map((p: (typeof best)[number]) =>
-            <ProductCard
-              key={p.id}
-              slug={p.slug}
-              name={p.name}
-              imageUrl={p.images[0]?.url ?? null}
-              isFeatured={p.isFeatured}
-              isNew={p.isNew}
-              fromPriceCents={p.variants[0]?.priceCents ?? 0}
-              fromCompareAtCents={p.variants[0]?.compareAtCents ?? null}
-            />
-          )}
-        </div>
-        {best.length === 0 ? (
-          <div className="mt-4 text-xs text-[hsl(var(--muted))]">
-=======
       <SectionShell tone="light">
         <ProductRail
           title="Novidades"
@@ -253,7 +185,6 @@ export default async function HomePage() {
         />
       </SectionShell>
 
-      {/* MAIS VENDIDOS */}
       <SectionShell tone="accent">
         <ProductRail
           title="Mais vendidos"
@@ -266,7 +197,6 @@ export default async function HomePage() {
       {bestUi.length === 0 && (
         <div className="container pb-10">
           <div className="text-center text-xs text-[hsl(var(--muted))]">
->>>>>>> 8cb04a5a8bf609eab8837c3e974c3b76f2d53f0e
             Ainda sem base de pedidos pagos. Assim que o webhook confirmar pagamentos, isso preenche automaticamente.
           </div>
         </div>

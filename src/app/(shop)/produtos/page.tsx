@@ -1,11 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { ProductCard } from "@/components/shop/ProductCard";
-<<<<<<< HEAD
-import { notFound } from "next/navigation";
-=======
 import { ProductRail } from "@/components/shop/ProductRail";
->>>>>>> 8cb04a5a8bf609eab8837c3e974c3b76f2d53f0e
 
 type SearchParams = {
   q?: string;
@@ -59,7 +55,6 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
     orderBy: sort === "new" ? { createdAt: "desc" } : { createdAt: "desc" },
   });
 
-  // --- rating agregado (approved=true) ---
   const ids = products.map((p) => p.id);
   const grouped =
     ids.length > 0
@@ -126,17 +121,11 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
             className="w-full rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 text-sm"
           >
             <option value="">Todas</option>
-<<<<<<< HEAD
-            {categories.map((c: (typeof categories)[number]) =>
-              <option key={c.id} value={c.slug}>{c.name}</option>
-            )}
-=======
             {categories.map((c) => (
               <option key={c.id} value={c.slug}>
                 {c.name}
               </option>
             ))}
->>>>>>> 8cb04a5a8bf609eab8837c3e974c3b76f2d53f0e
           </select>
           <select
             name="sort"
@@ -170,21 +159,6 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
         </form>
       </div>
 
-<<<<<<< HEAD
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {products.map((p: (typeof products)[number]) =>
-          <ProductCard
-            key={p.id}
-            slug={p.slug}
-            name={p.name}
-            imageUrl={p.images[0]?.url ?? null}
-            isFeatured={p.isFeatured}
-            isNew={p.isNew}
-            fromPriceCents={p.variants[0]?.priceCents ?? 0}
-            fromCompareAtCents={p.variants[0]?.compareAtCents ?? null}
-          />
-        )}
-=======
       {/* Mobile rail */}
       <div className="md:hidden">
         <ProductRail title={railTitle} products={railProducts} />
@@ -209,7 +183,6 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
             />
           );
         })}
->>>>>>> 8cb04a5a8bf609eab8837c3e974c3b76f2d53f0e
       </div>
 
       {products.length === 0 ? (
