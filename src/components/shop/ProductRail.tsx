@@ -57,10 +57,10 @@ export function ProductRail({
   if (!products?.length) return null;
 
   return (
-    <section className="container mt-10">
+    <section className="mt-8">
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+          <h2 className="text-base font-semibold tracking-tight">{title}</h2>
           {subtitle ? <p className="mt-1 text-sm text-[hsl(var(--muted))]">{subtitle}</p> : null}
         </div>
 
@@ -95,59 +95,55 @@ export function ProductRail({
         </div>
       </div>
 
-      {/* Mobile: rail com swipe | Desktop: grid */}
-      <div className="mt-4">
-        <div className="md:hidden" ref={emblaRef}>
-          <div className="flex gap-3">
-            {products.map((p) => (
-              <div
-                key={p.id}
-                className="flex-[0_0_72%] sm:flex-[0_0_46%]"
-              >
-                <ProductCardCompact
-                  slug={p.slug}
-                  name={p.name}
-                  imageUrl={p.imageUrl}
-                  isNew={!!p.isNew}
-                  isFeatured={!!p.isFeatured}
-                  fromPriceCents={p.fromPriceCents}
-                  fromCompareAtCents={p.fromCompareAtCents ?? null}
-                  ratingAvg={p.ratingAvg ?? 0}
-                  ratingCount={p.ratingCount ?? 0}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="hidden gap-4 md:grid md:grid-cols-4">
-          {products.slice(0, 8).map((p) => (
-            <ProductCardCompact
-              key={p.id}
-              slug={p.slug}
-              name={p.name}
-              imageUrl={p.imageUrl}
-              isNew={!!p.isNew}
-              isFeatured={!!p.isFeatured}
-              fromPriceCents={p.fromPriceCents}
-              fromCompareAtCents={p.fromCompareAtCents ?? null}
-              ratingAvg={p.ratingAvg ?? 0}
-              ratingCount={p.ratingCount ?? 0}
-            />
+      {/* Mobile: swipe rail */}
+      <div className="mt-4 md:hidden" ref={emblaRef}>
+        <div className="flex gap-3">
+          {products.map((p) => (
+            <div key={p.id} className="flex-[0_0_78%] sm:flex-[0_0_46%]">
+              <ProductCardCompact
+                slug={p.slug}
+                name={p.name}
+                imageUrl={p.imageUrl}
+                isNew={!!p.isNew}
+                isFeatured={!!p.isFeatured}
+                fromPriceCents={p.fromPriceCents}
+                fromCompareAtCents={p.fromCompareAtCents ?? null}
+                ratingAvg={p.ratingAvg ?? 0}
+                ratingCount={p.ratingCount ?? 0}
+              />
+            </div>
           ))}
         </div>
-
-        {hrefAll ? (
-          <div className="mt-4 md:hidden">
-            <Link
-              href={hrefAll}
-              className="inline-flex w-full items-center justify-center rounded-xl border border-[hsl(var(--border))] bg-white px-4 py-2 text-sm hover:bg-[hsl(var(--accent))]"
-            >
-              Ver todos os produtos
-            </Link>
-          </div>
-        ) : null}
       </div>
+
+      {/* Desktop: grid compacto */}
+      <div className="mt-4 hidden gap-4 md:grid md:grid-cols-4">
+        {products.slice(0, 8).map((p) => (
+          <ProductCardCompact
+            key={p.id}
+            slug={p.slug}
+            name={p.name}
+            imageUrl={p.imageUrl}
+            isNew={!!p.isNew}
+            isFeatured={!!p.isFeatured}
+            fromPriceCents={p.fromPriceCents}
+            fromCompareAtCents={p.fromCompareAtCents ?? null}
+            ratingAvg={p.ratingAvg ?? 0}
+            ratingCount={p.ratingCount ?? 0}
+          />
+        ))}
+      </div>
+
+      {hrefAll ? (
+        <div className="mt-4 md:hidden">
+          <Link
+            href={hrefAll}
+            className="inline-flex w-full items-center justify-center rounded-xl border border-[hsl(var(--border))] bg-white px-4 py-2 text-sm hover:bg-[hsl(var(--accent))]"
+          >
+            Ver todos os produtos
+          </Link>
+        </div>
+      ) : null}
     </section>
   );
 }

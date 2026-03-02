@@ -26,7 +26,7 @@ export function ProductCardCompact(props: Props) {
               alt={props.name}
               fill
               className="object-cover transition duration-500 group-hover:scale-[1.03]"
-              sizes="(max-width: 768px) 70vw, 25vw"
+              sizes="(max-width: 768px) 72vw, 25vw"
             />
           ) : null}
 
@@ -38,11 +38,13 @@ export function ProductCardCompact(props: Props) {
 
         <div className="p-4">
           <div className="line-clamp-2 text-sm font-semibold leading-snug">{props.name}</div>
+
           <div className="mt-2">
             <RatingStars value={props.ratingAvg || 0} count={props.ratingCount || 0} />
           </div>
+
           <div className="mt-2">
-            <Price priceCents={props.fromPriceCents} compareAtCents={props.fromCompareAtCents} />
+            <Price priceCents={props.fromPriceCents} compareAtCents={props.fromCompareAtCents ?? null} />
           </div>
 
           <div className="mt-3 text-xs text-[hsl(var(--muted))]">

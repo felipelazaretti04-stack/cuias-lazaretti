@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { ProductCard } from "@/components/shop/ProductCard";
+import { ProductRail } from "@/components/shop/ProductRail";
 
 type SearchParams = {
   q?: string;
@@ -51,10 +52,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
       variants: { where: { isActive: true }, orderBy: { priceCents: "asc" }, take: 1 },
       category: true,
     },
-    orderBy:
-      sort === "new"
-        ? { createdAt: "desc" }
-        : { createdAt: "desc" }, // (mantém simples p/ não quebrar diff; depois refinamos preço real)
+    orderBy: sort === "new" ? { createdAt: "desc" } : { createdAt: "desc" },
   });
 
   // --- rating agregado (approved=true) ---
@@ -76,8 +74,33 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
     ])
   );
 
+  const railProducts = products
+    .map((p) => {
+      const v = p.variants[0];
+      if (!v) return null;
+      const r = ratingMap.get(p.id) || { avg: 0, count: 0 };
+      return {
+        id: p.id,
+        slug: p.slug,
+        name: p.name,
+        imageUrl: p.images[0]?.url ?? null,
+        isFeatured: p.isFeatured,
+        isNew: p.isNew,
+        fromPriceCents: v.priceCents,
+        fromCompareAtCents: v.compareAtCents ?? null,
+        ratingAvg: r.avg,
+        ratingCount: r.count,
+      };
+    })
+    .filter(Boolean) as any[];
+
+  const railTitle =
+    q || cat || sp.min || sp.max
+      ? "Resultados (arraste para ver mais)"
+      : "Produtos (arraste para ver mais)";
+
   return (
-    <div className="container py-10">
+    <div className="container py-8 md:py-10">
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Produtos</h1>
@@ -137,7 +160,13 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
         </form>
       </div>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Mobile rail */}
+      <div className="md:hidden">
+        <ProductRail title={railTitle} products={railProducts} />
+      </div>
+
+      {/* Desktop grid */}
+      <div className="mt-8 hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-3 md:grid">
         {products.map((p) => {
           const r = ratingMap.get(p.id) || { avg: 0, count: 0 };
           return (
@@ -153,15 +182,13 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
               ratingAvg={r.avg}
               ratingCount={r.count}
             />
-          );  
+          );
         })}
       </div>
 
       {products.length === 0 ? (
         <div className="mt-10 card p-6">
-          <div className="text-sm text-[hsl(var(--muted))]">
-            Nada encontrado. Tenta ajustar os filtros.
-          </div>
+          <div className="text-sm text-[hsl(var(--muted))]">Nada encontrado. Tenta ajustar os filtros.</div>
           <Link href="/produtos" className="mt-3 inline-block text-sm underline">
             Limpar filtros
           </Link>
