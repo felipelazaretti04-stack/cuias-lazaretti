@@ -16,9 +16,7 @@ export async function GET(_: Request, ctx: { params: Promise<{ publicId: string 
       items: {
         include: {
           variant: {
-            include: {
-              product: true,
-            },
+            include: { product: true },
           },
         },
       },

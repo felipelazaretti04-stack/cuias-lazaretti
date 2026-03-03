@@ -8,22 +8,11 @@ test("Admin: login e abre listagens", async ({ page }) => {
 
   await page.goto("/admin/login");
 
-  // acha 1º input visível (texto) + 1º password visível
-  const textInput = page.locator('input:not([type="hidden"]):not([type="password"])').filter({ has: page.locator(":visible") }).first();
-  const passInput = page.locator('input[type="password"]:visible').first();
+await page.getByTestId("admin-email").fill(email!);
+await page.getByTestId("admin-password").fill(password!);
+await page.getByTestId("admin-login-submit").click();
 
-  // fallback caso :visible em filter não funcione em alguns engines
-  const textFallback = page.locator('input:not([type="hidden"]):not([type="password"])').first();
-
-  await expect(textInput.or(textFallback)).toBeVisible({ timeout: 15000 });
-  await (await textInput.or(textFallback)).fill(email!);
-
-  await expect(passInput).toBeVisible({ timeout: 15000 });
-  await passInput.fill(password!);
-
-  await page.getByRole("button").filter({ hasText: /entrar|login|acessar/i }).click();
-
-  await expect(page).toHaveURL(/\/admin/);
+await expect(page).toHaveURL(/\/admin/);
 
   await page.goto("/admin/produtos");
   await expect(page.getByRole("heading", { name: "Produtos" })).toBeVisible();

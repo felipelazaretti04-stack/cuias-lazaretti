@@ -17,7 +17,7 @@ type ProductImage = {
 };
 
 type Variant = {
-  id?: string; // Adiciona isso
+  id?: string; // <-- adicionar
   sku: string;
   priceCents: number;
   compareAtCents?: number | null;
@@ -83,7 +83,8 @@ export default function EditProductClient({ productId }: { productId: string }) 
       return;
     }
 
-    const data = await res.json();
+    const data = await res.json().catch(() => null);
+    setErr(data?.error || `Falha ao carregar pedido (${res.status})`);
     const p = data.product as any;
     const cats = (data.categories || []) as Category[];
 
@@ -111,7 +112,7 @@ export default function EditProductClient({ productId }: { productId: string }) 
     setImages(imgs);
 
     const vars: Variant[] = (p.variants || []).map((v: any) => ({
-      id: v.id, // Adiciona isso
+      id: v.id, // <-- aqui
       sku: v.sku,
       priceCents: v.priceCents,
       compareAtCents: v.compareAtCents ?? null,
@@ -127,18 +128,18 @@ export default function EditProductClient({ productId }: { productId: string }) 
       vars.length
         ? vars
         : [
-            {
-              sku: "",
-              priceCents: 0,
-              compareAtCents: null,
-              stock: 0,
-              isActive: true,
-              size: "Médio",
-              finish: "Lisa",
-              color: "Natural",
-              personalization: "Não",
-            },
-          ]
+          {
+            sku: "",
+            priceCents: 0,
+            compareAtCents: null,
+            stock: 0,
+            isActive: true,
+            size: "Médio",
+            finish: "Lisa",
+            color: "Natural",
+            personalization: "Não",
+          },
+        ]
     );
   }
 
@@ -217,12 +218,12 @@ export default function EditProductClient({ productId }: { productId: string }) 
       })),
 
       variants: variants.map((v) => ({
+        id: v.id, // <-- aqui
         sku: v.sku.trim(),
         priceCents: Number(v.priceCents) || 0,
         compareAtCents: v.compareAtCents == null ? null : Number(v.compareAtCents),
         stock: Number(v.stock) || 0,
         isActive: !!v.isActive,
-
         size: v.size || null,
         finish: v.finish || null,
         color: v.color || null,

@@ -2,15 +2,13 @@
 
 export const dynamic = "force-dynamic";
 
-
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 
 export default function AdminLoginPage() {
-  const router = useRouter();
   const sp = useSearchParams();
   const next = sp.get("next") || "/admin";
 
@@ -38,30 +36,43 @@ export default function AdminLoginPage() {
       return;
     }
 
-        window.location.href = next;
+    // garante navegação completa (cookie)
+    window.location.href = next;
   }
 
   return (
     <div className="container py-16">
       <div className="mx-auto max-w-md card p-8">
         <h1 className="text-2xl font-semibold">Login do Admin</h1>
-        <p className="mt-2 text-sm text-[hsl(var(--muted))]">
-          Acesso restrito.
-        </p>
+        <p className="mt-2 text-sm text-[hsl(var(--muted))]">Acesso restrito.</p>
 
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
           <div className="space-y-2">
             <Label>E-mail</Label>
-            <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@..." />
+            <Input
+              data-testid="admin-email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@..."
+              autoComplete="email"
+            />
           </div>
+
           <div className="space-y-2">
             <Label>Senha</Label>
-            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+            <Input
+              data-testid="admin-password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              autoComplete="current-password"
+            />
           </div>
 
           {err ? <div className="text-sm text-red-700">{err}</div> : null}
 
-          <Button disabled={loading} className="w-full" type="submit">
+          <Button data-testid="admin-login-submit" disabled={loading} className="w-full" type="submit">
             {loading ? "Entrando..." : "Entrar"}
           </Button>
 

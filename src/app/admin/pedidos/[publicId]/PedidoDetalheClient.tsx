@@ -17,7 +17,8 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
     setErr(null);
     const res = await fetch(`/api/admin/pedidos/${publicId}`);
     if (!res.ok) {
-      setErr("Falha ao carregar pedido");
+      const data = await res.json().catch(() => null);
+      setErr(data?.error || `Falha ao carregar pedido (${res.status})`);
       return;
     }
     const data = await res.json();
