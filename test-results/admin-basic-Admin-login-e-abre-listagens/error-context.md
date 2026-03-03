@@ -1,0 +1,47 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e4]:
+      - link "Cuias Lazaretti • Admin" [ref=e5] [cursor=pointer]:
+        - /url: /admin
+      - generic [ref=e6]:
+        - link "Conteúdo" [ref=e7] [cursor=pointer]:
+          - /url: /admin/conteudo
+        - link "Mídias" [ref=e8] [cursor=pointer]:
+          - /url: /admin/midias
+        - link "Pedidos" [ref=e9] [cursor=pointer]:
+          - /url: /admin/pedidos
+        - link "Produtos" [ref=e10] [cursor=pointer]:
+          - /url: /admin/produtos
+        - link "Categorias" [ref=e11] [cursor=pointer]:
+          - /url: /admin/categorias
+        - link "Clientes" [ref=e12] [cursor=pointer]:
+          - /url: /admin/clientes
+        - link "Avaliações" [ref=e13] [cursor=pointer]:
+          - /url: /admin/avaliacoes
+        - link "Cupons" [ref=e14] [cursor=pointer]:
+          - /url: /admin/cupons
+        - button "Sair" [ref=e16] [cursor=pointer]
+    - generic [ref=e18]:
+      - heading "Login do Admin" [level=1] [ref=e19]
+      - paragraph [ref=e20]: Acesso restrito.
+      - generic [ref=e21]:
+        - generic [ref=e22]:
+          - text: E-mail
+          - textbox "admin@..." [ref=e23]
+        - generic [ref=e24]:
+          - text: Senha
+          - textbox "••••••••" [ref=e25]
+        - button "Entrar" [ref=e26] [cursor=pointer]
+        - generic [ref=e27]:
+          - text: Seed cria 1 admin via
+          - code [ref=e28]: SEED_ADMIN_EMAIL
+          - text: e
+          - code [ref=e29]: SEED_ADMIN_PASSWORD
+          - text: .
+  - button "Open Next.js Dev Tools" [ref=e35] [cursor=pointer]:
+    - img [ref=e36]
+  - alert [ref=e39]
+```
