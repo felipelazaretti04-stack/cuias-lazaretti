@@ -1,154 +1,63 @@
-import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
-import { getBestSellers } from "@/lib/bestSellers";
 import { HeroCarousel } from "@/components/shop/HeroCarousel";
 import { TrustBadges } from "@/components/shop/TrustBadges";
 import { ProductRail } from "@/components/shop/ProductRail";
 import { SectionShell } from "@/components/shop/SectionShell";
+import { getHeroSlides, getHomeRails } from "@/lib/homeContent";
 
 export default async function HomePage() {
   const content = (await prisma.siteContent.findFirst())!;
-
-  const featured = await prisma.product.findMany({
-    where: { isActive: true, isFeatured: true },
-    orderBy: { createdAt: "desc" },
-    take: 8,
-    include: {
-      images: { orderBy: { sortOrder: "asc" }, take: 1 },
-      variants: { where: { isActive: true }, orderBy: { priceCents: "asc" }, take: 1 },
-      reviews: { where: { approved: true }, select: { rating: true } },
-    },
-  });
-
-  const newest = await prisma.product.findMany({
-    where: { isActive: true, isNew: true },
-    orderBy: { createdAt: "desc" },
-    take: 8,
-    include: {
-      images: { orderBy: { sortOrder: "asc" }, take: 1 },
-      variants: { where: { isActive: true }, orderBy: { priceCents: "asc" }, take: 1 },
-      reviews: { where: { approved: true }, select: { rating: true } },
-    },
-  });
-
-  const best = await getBestSellers(8);
-
-  function mapToRail(products: typeof featured) {
-    return products
-      .map((p) => {
-        const v = p.variants[0];
-        if (!v) return null;
-
-        const ratingCount = p.reviews?.length ?? 0;
-        const ratingAvg =
-          ratingCount > 0
-            ? p.reviews.reduce((acc, r) => acc + r.rating, 0) / ratingCount
-            : 0;
-
-        return {
-          id: p.id,
-          slug: p.slug,
-          name: p.name,
-          imageUrl: p.images[0]?.url ?? null,
-          fromPriceCents: v.priceCents,
-          fromCompareAtCents: v.compareAtCents ?? null,
-          isNew: p.isNew,
-          isFeatured: p.isFeatured,
-          ratingAvg,
-          ratingCount,
-        };
-      })
-      .filter(Boolean) as {
-        id: string;
-        slug: string;
-        name: string;
-        imageUrl: string | null;
-        fromPriceCents: number;
-        fromCompareAtCents: number | null;
-        isNew: boolean;
-        isFeatured: boolean;
-        ratingAvg: number;
-        ratingCount: number;
-      }[];
-  }
-
-  function mapBestToRail(products: typeof best) {
-    return products
-      .map((p) => {
-        const v = p.variants[0];
-        if (!v) return null;
-
-        return {
-          id: p.id,
-          slug: p.slug,
-          name: p.name,
-          imageUrl: p.images[0]?.url ?? null,
-          fromPriceCents: v.priceCents,
-          fromCompareAtCents: v.compareAtCents ?? null,
-          isNew: p.isNew,
-          isFeatured: p.isFeatured,
-          ratingAvg: 0,
-          ratingCount: 0,
-        };
-      })
-      .filter(Boolean) as {
-        id: string;
-        slug: string;
-        name: string;
-        imageUrl: string | null;
-        fromPriceCents: number;
-        fromCompareAtCents: number | null;
-        isNew: boolean;
-        isFeatured: boolean;
-        ratingAvg: number;
-        ratingCount: number;
-      }[];
-  }
-
-  const featuredUi = mapToRail(featured);
-  const newestUi = mapToRail(newest);
-  const bestUi = mapBestToRail(best);
-
-  const slides = [
-    {
-      imageUrl: content.heroImageUrl,
-      badge: content.heroBadgeText,
-      title: content.heroTitle,
-      highlight: "premium",
-      subtitle: content.heroSubtitle,
-      primaryText: content.heroPrimaryButtonText,
-      primaryHref: content.heroPrimaryButtonLink,
-      secondaryText: content.heroSecondaryButtonText,
-      secondaryHref: content.heroSecondaryButtonLink,
-    },
-    {
-      imageUrl: content.institutionalImageUrl,
-      badge: "Personalização sob medida",
-      title: "Presente que vira",
-      highlight: "memória",
-      subtitle: "Escolhe a peça e descreve a personalização no checkout. Nós cuidamos do resto.",
-      primaryText: "Ver personalizáveis",
-      primaryHref: "/produtos?q=personaliz",
-      secondaryText: "Falar no WhatsApp",
-      secondaryHref: "/contato",
-    },
-  ];
+  const slides = await getHeroSlides();
+  const rails = await getHomeRails();
 
   return (
     <div>
       <HeroCarousel slides={slides} />
       <TrustBadges />
 
-      <SectionShell tone="accent">
-        <ProductRail
-          title="Destaques da semana"
-          subtitle="Peças premium com acabamento caprichado."
-          hrefAll="/produtos?featured=1"
-          products={featuredUi}
-        />
-      </SectionShell>
+      {rails.map(({ rail, products }) => {
+        const ui = products
+          .map((p: any) => {
+            const v = p.variants?.[0];
+            if (!v) return null;
 
+            const ratingCount = p.reviews?.length ?? 0;
+            const ratingAvg =
+              ratingCount > 0
+                ? p.reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / ratingCount
+                : 0;
+
+            return {
+              id: p.id,
+              slug: p.slug,
+              name: p.name,
+              imageUrl: p.images?.[0]?.url ?? null,
+              fromPriceCents: v.priceCents,
+              fromCompareAtCents: v.compareAtCents ?? null,
+              isNew: !!p.isNew,
+              isFeatured: !!p.isFeatured,
+              ratingAvg,
+              ratingCount,
+            };
+          })
+          .filter(Boolean);
+
+        const tone = rail.sortOrder % 2 === 0 ? "accent" : "light";
+
+        return (
+          <SectionShell key={rail.id} tone={tone as any}>
+            <ProductRail
+              title={rail.title}
+              subtitle={rail.subtitle || ""}
+              hrefAll={rail.hrefAll || "/produtos"}
+              products={ui as any}
+            />
+          </SectionShell>
+        );
+      })}
+
+      {/* Seção institucional */}
       <section className="container py-10">
         <div className="card p-8">
           <div className="grid gap-6 md:grid-cols-2 md:items-center">
@@ -175,32 +84,6 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
-
-      <SectionShell tone="light">
-        <ProductRail
-          title="Novidades"
-          subtitle="Lançamentos e reposições fresquinhas."
-          hrefAll="/produtos?new=1"
-          products={newestUi}
-        />
-      </SectionShell>
-
-      <SectionShell tone="accent">
-        <ProductRail
-          title="Mais vendidos"
-          subtitle="Os favoritos da roda de mate."
-          hrefAll="/produtos"
-          products={bestUi}
-        />
-      </SectionShell>
-
-      {bestUi.length === 0 && (
-        <div className="container pb-10">
-          <div className="text-center text-xs text-[hsl(var(--muted))]">
-            Ainda sem base de pedidos pagos. Assim que o webhook confirmar pagamentos, isso preenche automaticamente.
-          </div>
-        </div>
-      )}
     </div>
   );
 }

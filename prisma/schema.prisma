@@ -277,3 +277,77 @@ model Coupon {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+model HeroSlide {
+  id String @id @default(cuid())
+
+  imageUrl String?
+  badge    String?
+  title    String?
+  highlight String?
+  subtitle String?
+
+  primaryText String?
+  primaryHref String?
+  secondaryText String?
+  secondaryHref String?
+
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum HomeRailType {
+  FEATURED
+  NEW
+  BEST_SELLERS
+  PERSONALIZED
+  READY_TO_SHIP
+  CATEGORY
+  MANUAL
+}
+
+model HomeRail {
+  id String @id @default(cuid())
+
+  title    String
+  subtitle String?
+  hrefAll  String?
+
+  type     HomeRailType @default(FEATURED)
+
+  // para CATEGORY
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  // para MANUAL
+  items HomeRailItem[]
+
+  // filtros extras (opcional, pra evoluir depois)
+  limit Int @default(8)
+
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+}
+
+model HomeRailItem {
+  id String @id @default(cuid())
+
+  railId    String
+  rail      HomeRail @relation(fields: [railId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  sortOrder Int @default(0)
+
+  @@unique([railId, productId])
+  @@index([railId])
+  @@index([productId])
+}

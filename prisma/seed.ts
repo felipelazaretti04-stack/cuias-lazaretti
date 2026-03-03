@@ -297,6 +297,59 @@ async function main() {
   console.log("Senha: (a do SEED_ADMIN_PASSWORD) TROCAR EM PRODUÇÃO");
 }
 
+// ===== HERO SLIDES (até 5) =====
+const slidesCount = await prisma.heroSlide.count();
+if (slidesCount === 0) {
+  await prisma.heroSlide.createMany({
+    data: [
+      {
+        sortOrder: 0,
+        isActive: true,
+        badge: "Artesanal Premium • Sul do Brasil",
+        title: "A cuia certa pro teu mate.",
+        highlight: "premium",
+        subtitle: "Cuias premium, bombas e acessórios com estética clean. Envio Brasil + retirada em Erechim/RS.",
+        primaryText: "Comprar agora",
+        primaryHref: "/produtos",
+        secondaryText: "Ver cuias",
+        secondaryHref: "/produtos?cat=cuias",
+        imageUrl: null,
+      },
+      {
+        sortOrder: 1,
+        isActive: true,
+        badge: "Personalização sob medida",
+        title: "Presente que vira",
+        highlight: "memória",
+        subtitle: "Escolhe a peça e descreve a personalização no checkout. Nós cuidamos do resto.",
+        primaryText: "Ver personalizáveis",
+        primaryHref: "/produtos?personalizavel=1",
+        secondaryText: "Falar no WhatsApp",
+        secondaryHref: "/contato",
+        imageUrl: null,
+      },
+      { sortOrder: 2, isActive: true, badge: "Novidades", title: "Chegou agora", highlight: "no site", subtitle: "Reposições e lançamentos — pega antes que acabe.", primaryText: "Ver novidades", primaryHref: "/produtos?new=1" },
+      { sortOrder: 3, isActive: true, badge: "Prontas pra envio", title: "Produção", highlight: "rápida", subtitle: "Peças com prazo 0–1 dia de produção.", primaryText: "Ver prontas", primaryHref: "/produtos?ready=1" },
+      { sortOrder: 4, isActive: true, badge: "Kit Mate", title: "Monte teu", highlight: "combo", subtitle: "Economiza no conjunto e sai com tudo pronto.", primaryText: "Ver combos", primaryHref: "/produtos" },
+    ],
+  });
+}
+
+// ===== HOME RAILS =====
+const railsCount = await prisma.homeRail.count();
+if (railsCount === 0) {
+  await prisma.homeRail.createMany({
+    data: [
+      { sortOrder: 0, isActive: true, title: "Destaques da semana", subtitle: "Peças premium com acabamento caprichado.", hrefAll: "/produtos?featured=1", type: "FEATURED", limit: 10 },
+      { sortOrder: 1, isActive: true, title: "Novidades", subtitle: "Lançamentos e reposições fresquinhas.", hrefAll: "/produtos?new=1", type: "NEW", limit: 10 },
+      { sortOrder: 2, isActive: true, title: "Personalizáveis", subtitle: "Gravação e detalhes que deixam com a tua cara.", hrefAll: "/produtos?personalizavel=1", type: "PERSONALIZED", limit: 10 },
+      { sortOrder: 3, isActive: true, title: "Prontas pra envio", subtitle: "Prazo rápido (0–1 dia).", hrefAll: "/produtos?ready=1", type: "READY_TO_SHIP", limit: 10 },
+      { sortOrder: 4, isActive: true, title: "Mais vendidos", subtitle: "Assim que tiver pedidos pagos, isso fica perfeito.", hrefAll: "/produtos", type: "BEST_SELLERS", limit: 10 },
+    ],
+  });
+}
+
+
 main()
   .catch((e) => {
     console.error(e);
