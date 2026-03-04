@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Textarea } from "@/components/ui/Textarea";
 import { MediaPicker } from "@/components/admin/MediaPicker";
+import { CameraUploadButton } from "@/components/admin/CameraUploadButton";
 
 type Category = { id: string; name: string };
 
@@ -335,9 +336,12 @@ export default function EditProductClient({ productId }: { productId: string }) 
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold">Imagens</div>
-                <div className="text-xs text-[hsl(var(--muted))]">Cole uma URL ou selecione da galeria.</div>
+                <div className="text-xs text-[hsl(var(--muted))]">Cole uma URL, tire uma foto ou selecione da galeria.</div>
               </div>
-              <MediaPicker onPick={(url) => addImage(url)} />
+              <div className="flex flex-wrap gap-2">
+                <CameraUploadButton onUploaded={(url) => addImage(url)} />
+                <MediaPicker onPick={(url) => addImage(url)} />
+              </div>
             </div>
 
             <div className="mt-4 grid gap-3 md:grid-cols-3">

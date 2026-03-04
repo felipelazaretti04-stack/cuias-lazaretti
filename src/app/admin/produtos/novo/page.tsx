@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { MediaPicker } from "@/components/admin/MediaPicker";
+import { CameraUploadButton } from "@/components/admin/CameraUploadButton";
 
 type Category = { id: string; name: string };
 
@@ -295,11 +296,13 @@ export default function NovoProdutoPage() {
             </div>
 
             <div className="flex flex-wrap gap-2">
+              <CameraUploadButton onUploaded={addImageFromPicker} />
               <MediaPicker onPick={addImageFromPicker} />
               <Button type="button" variant="secondary" onClick={addImage}>
                 Adicionar imagem
               </Button>
             </div>
+
           </div>
 
           <div className="mt-4 grid gap-3">

@@ -7,7 +7,238 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ===== ENUMS =====
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(ADMIN)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  isActive  Boolean   @default(true)
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+}
+
+model Product {
+  id             String         @id @default(cuid())
+  name           String
+  slug           String         @unique
+  description    String?
+  care           String?
+  isPersonalized Boolean        @default(false)
+  productionDays Int            @default(0)
+  isActive       Boolean        @default(true)
+  isFeatured     Boolean        @default(false)
+  isNew          Boolean        @default(false)
+  categoryId     String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  category       Category?      @relation(fields: [categoryId], references: [id])
+  images         ProductImage[]
+  reviews        Review[]
+  variants       Variant[]
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  url       String
+  alt       String?
+  sortOrder Int     @default(0)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model Variant {
+  id              String      @id @default(cuid())
+  productId       String
+  sku             String      @unique
+  size            String?
+  finish          String?
+  color           String?
+  personalization String?
+  priceCents      Int
+  compareAtCents  Int?
+  stock           Int         @default(0)
+  isActive        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  orderItems      OrderItem[]
+  product         Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model Order {
+  id                   String         @id @default(cuid())
+  publicId             String         @unique
+  status               OrderStatus    @default(PENDING)
+  customerEmail        String?
+  customerName         String?
+  customerPhone        String?
+  shippingMethod       String
+  shippingAddressJson  Json?
+  shippingCostCents    Int            @default(0)
+  subtotalCents        Int            @default(0)
+  totalCents           Int            @default(0)
+  paymentProvider      String?
+  paidAt               DateTime?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  mpPaymentId          String?        @unique
+  mpPreferenceId       String?        @unique
+  paymentStatus        PaymentStatus  @default(PENDING)
+  shippingDebugMessage String?
+  shippingProvider     String
+  shippingServiceName  String?
+  stockReservedAt      DateTime?
+  customerId           String?
+  couponCode           String?
+  discountCents        Int            @default(0)
+  customer             Customer?      @relation(fields: [customerId], references: [id])
+  items                OrderItem[]
+  paymentEvents        PaymentEvent[]
+
+  @@index([customerId])
+}
+
+model OrderItem {
+  id             String  @id @default(cuid())
+  orderId        String
+  variantId      String
+  productName    String
+  variantLabel   String?
+  sku            String
+  unitPriceCents Int
+  qty            Int
+  lineTotalCents Int
+  order          Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant        Variant @relation(fields: [variantId], references: [id])
+
+  @@index([orderId])
+  @@index([variantId])
+}
+
+model PaymentEvent {
+  id         String   @id @default(cuid())
+  provider   String
+  externalId String
+  type       String?
+  rawJson    Json
+  receivedAt DateTime @default(now())
+  orderId    String?
+  order      Order?   @relation(fields: [orderId], references: [id])
+
+  @@unique([provider, externalId])
+  @@index([orderId])
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  email     String?  @unique
+  name      String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  orders    Order[]
+}
+
+model SiteContent {
+  id                      String   @id @default(cuid())
+  heroTitle               String   @default("A cuia certa pro teu mate.")
+  heroSubtitle            String   @default("Cuias premium, bombas e acessórios com estética clean. Envio Brasil + retirada em Erechim/RS.")
+  heroBadgeText           String   @default("Artesanal Premium • Sul do Brasil")
+  heroPrimaryButtonText   String   @default("Comprar agora")
+  heroPrimaryButtonLink   String   @default("/produtos")
+  heroSecondaryButtonText String   @default("Ver cuias")
+  heroSecondaryButtonLink String   @default("/produtos?cat=cuias")
+  heroImageUrl            String?
+  institutionalTitle      String   @default("Personalização que faz sentido")
+  institutionalText       String   @default("Escolha a variação personalizável e descreva no checkout. Prazo de produção aparece na página do produto.")
+  institutionalImageUrl   String?
+  scarcityText            String   @default("Produção artesanal — prazo médio 3 dias")
+  trustBarJson            Json     @default("[]")
+  updatedAt               DateTime @updatedAt
+}
+
+model MediaAsset {
+  id        String   @id @default(cuid())
+  url       String
+  publicId  String?
+  provider  String   @default("CLOUDINARY")
+  width     Int?
+  height    Int?
+  bytes     Int?
+  format    String?
+  alt       String?
+  createdAt DateTime @default(now())
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  productId String
+  rating    Int
+  comment   String?
+  name      String
+  approved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([approved])
+}
+
+model Coupon {
+  id        String     @id @default(cuid())
+  code      String     @unique
+  type      CouponType
+  value     Int
+  active    Boolean    @default(true)
+  expiresAt DateTime?
+  maxUses   Int?
+  usesCount Int        @default(0)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model HeroSlide {
+  id            String   @id @default(cuid())
+  imageUrl      String?
+  badge         String?
+  title         String?
+  highlight     String?
+  subtitle      String?
+  primaryText   String?
+  primaryHref   String?
+  secondaryText String?
+  secondaryHref String?
+  sortOrder     Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model HomeRail {
+  id        String       @id @default(cuid())
+  title     String
+  subtitle  String?
+  hrefAll   String?
+  type      HomeRailType @default(FEATURED)
+  limit     Int          @default(8)
+  sortOrder Int          @default(0)
+  isActive  Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
 
 enum UserRole {
   ADMIN
@@ -34,291 +265,10 @@ enum CouponType {
   FIXED
 }
 
-// ===== MODELS =====
-
-model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  role         UserRole @default(ADMIN)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-}
-
-model Category {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  isActive  Boolean  @default(true)
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  products Product[]
-}
-
-model Product {
-  id             String   @id @default(cuid())
-  name           String
-  slug           String   @unique
-  description    String?
-  care           String?
-  isPersonalized Boolean  @default(false)
-  productionDays Int      @default(0)
-
-  isActive   Boolean @default(true)
-  isFeatured Boolean @default(false)
-  isNew      Boolean @default(false)
-
-  categoryId String?
-  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  images   ProductImage[]
-  variants Variant[]
-  reviews  Review[]
-}
-
-model ProductImage {
-  id        String  @id @default(cuid())
-  productId String
-  url       String
-  alt       String?
-  sortOrder Int     @default(0)
-
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@index([productId])
-}
-
-model Variant {
-  id        String @id @default(cuid())
-  productId String
-  sku       String @unique
-
-  size            String?
-  finish          String?
-  color           String?
-  personalization String?
-
-  priceCents     Int
-  compareAtCents Int?
-  stock          Int     @default(0)
-  isActive       Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
-  orderItems OrderItem[]
-
-  @@index([productId])
-}
-
-model Order {
-  id       String      @id @default(cuid())
-  publicId String      @unique
-  status   OrderStatus @default(PENDING)
-
-  // ===== RELAÇÃO COM CUSTOMER =====
-  customerId String?
-  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
-
-  // Snapshot (mantemos por segurança histórica)
-  customerEmail String?
-  customerName  String?
-  customerPhone String?
-
-  // ===== SHIPPING =====
-  shippingMethod       String
-  shippingProvider     String
-  shippingServiceName  String?
-  shippingDebugMessage String?
-  shippingAddressJson  Json?
-  shippingCostCents    Int    @default(0)
-
-  // ===== VALORES =====
-  subtotalCents Int @default(0)
-  totalCents    Int @default(0)
-
-  // ===== CUPOM/DESCONTO =====
-  couponCode    String?
-  discountCents Int     @default(0)
-
-  // ===== PAGAMENTO =====
-  paymentProvider String?
-  mpPreferenceId  String?       @unique
-  mpPaymentId     String?       @unique
-  paymentStatus   PaymentStatus @default(PENDING)
-  paidAt          DateTime?
-
-  // ===== CONTROLE =====
-  stockReservedAt DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  // ===== RELAÇÕES =====
-  items         OrderItem[]
-  paymentEvents PaymentEvent[]
-
-  @@index([customerId])
-}
-
-model OrderItem {
-  id             String @id @default(cuid())
-  orderId        String
-  variantId      String
-  productName    String
-  variantLabel   String?
-  sku            String
-  unitPriceCents Int
-  qty            Int
-  lineTotalCents Int
-
-  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  variant Variant @relation(fields: [variantId], references: [id], onDelete: Restrict)
-
-  @@index([orderId])
-  @@index([variantId])
-}
-
-model PaymentEvent {
-  id         String   @id @default(cuid())
-  provider   String
-  externalId String
-  type       String?
-  rawJson    Json
-  receivedAt DateTime @default(now())
-
-  orderId String?
-  order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
-
-  @@unique([provider, externalId])
-  @@index([orderId])
-}
-
-model Customer {
-  id        String   @id @default(cuid())
-  email     String?  @unique
-  name      String?
-  phone     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  orders Order[]
-}
-
-// ===== BLOCO D: CRO + CONTENT + MEDIA + REVIEWS + COUPONS =====
-
-model SiteContent {
-  id String @id @default(cuid())
-
-  heroTitle    String @default("A cuia certa pro teu mate.")
-  heroSubtitle String @default("Cuias premium, bombas e acessórios com estética clean. Envio Brasil + retirada em Erechim/RS.")
-  heroBadgeText String @default("Artesanal Premium • Sul do Brasil")
-
-  heroPrimaryButtonText  String @default("Comprar agora")
-  heroPrimaryButtonLink  String @default("/produtos")
-  heroSecondaryButtonText String @default("Ver cuias")
-  heroSecondaryButtonLink String @default("/produtos?cat=cuias")
-
-  heroImageUrl          String?
-  institutionalTitle    String  @default("Personalização que faz sentido")
-  institutionalText     String  @default("Escolha a variação personalizável e descreva no checkout. Prazo de produção aparece na página do produto.")
-  institutionalImageUrl String?
-  scarcityText          String  @default("Produção artesanal — prazo médio 3 dias")
-
-  trustBarJson Json @default("[]")
-
-  updatedAt DateTime @updatedAt
-}
-
-model MediaAsset {
-  id        String  @id @default(cuid())
-  url       String
-  publicId  String?
-  provider  String  @default("CLOUDINARY")
-  width     Int?
-  height    Int?
-  bytes     Int?
-  format    String?
-  alt       String?
-
-  createdAt DateTime @default(now())
-}
-
-model Review {
-  id        String   @id @default(cuid())
-  productId String
-  rating    Int
-  comment   String?
-  name      String
-  approved  Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@index([productId])
-  @@index([approved])
-}
-
-model Coupon {
-  id        String     @id @default(cuid())
-  code      String     @unique
-  type      CouponType
-  value     Int
-  active    Boolean    @default(true)
-  expiresAt DateTime?
-  maxUses   Int?
-  usesCount Int        @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-model HeroSlide {
-  id String @id @default(cuid())
-
-  imageUrl String?
-  badge    String?
-  title    String?
-  highlight String?
-  subtitle String?
-
-  primaryText String?
-  primaryHref String?
-  secondaryText String?
-  secondaryHref String?
-
-  sortOrder Int     @default(0)
-  isActive  Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 enum HomeRailType {
   FEATURED
   NEW
   BEST_SELLERS
   PERSONALIZED
   READY_TO_SHIP
-}
-
-model HomeRail {
-  id String @id @default(cuid())
-
-  title    String
-  subtitle String?
-  hrefAll  String?
-
-  type     HomeRailType @default(FEATURED)
-  limit    Int @default(8)
-
-  sortOrder Int     @default(0)
-  isActive  Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
