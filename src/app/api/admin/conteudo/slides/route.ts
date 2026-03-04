@@ -35,6 +35,10 @@ export async function POST(req: Request) {
   const parsed = slideSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Dados inválidos", issues: parsed.error.flatten() }, { status: 400 });
 
+  // limite hard: 5 slides
+  const count = await prisma.heroSlide.count();
+  if (count >= 5) return NextResponse.json({ error: "Limite de 5 slides atingido" }, { status: 400 });
+
   const created = await prisma.heroSlide.create({ data: parsed.data });
   return NextResponse.json({ slide: created }, { status: 201 });
 }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCart } from "@/lib/cart";
 import { ShoppingBag, UserRound } from "lucide-react";
 import { SearchBar } from "@/components/shop/SearchBar";
+import { MobileMenu } from "@/components/shop/MobileMenu";
 
 export async function Header() {
   const cart = await getCart();
@@ -23,15 +24,6 @@ export async function Header() {
         </div>
 
         <div className="flex items-center justify-end gap-2">
-          <Link
-            href="/admin"
-            className="inline-flex items-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 text-sm hover:bg-[hsl(var(--accent))]"
-            title="Conta/Admin"
-          >
-            <UserRound size={16} />
-            <span className="hidden sm:inline">Conta</span>
-          </Link>
-
           <Link
             href="/carrinho"
             className="relative inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-3 py-2 text-sm font-medium text-white hover:opacity-95"

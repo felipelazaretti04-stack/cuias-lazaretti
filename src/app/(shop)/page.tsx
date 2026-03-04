@@ -4,7 +4,8 @@ import { HeroCarousel } from "@/components/shop/HeroCarousel";
 import { TrustBadges } from "@/components/shop/TrustBadges";
 import { ProductRail } from "@/components/shop/ProductRail";
 import { SectionShell } from "@/components/shop/SectionShell";
-import { getHeroSlides, getHomeRails } from "@/lib/homeContent";
+import { getHeroSlidesForCarousel as getHeroSlides, getHomeRailsResolved as getHomeRails } from "@/lib/homeContent";
+
 
 export default async function HomePage() {
   const content = (await prisma.siteContent.findFirst())!;
