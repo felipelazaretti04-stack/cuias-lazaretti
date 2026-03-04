@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { StatusPill } from "@/components/admin/StatusPill";
+import { orderStatusLabel, paymentStatusLabel } from "@/lib/orderLabels";
 
 type Order = any;
 
@@ -67,8 +68,11 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
           <div>
             <div className="text-xs text-[hsl(var(--muted))]">Pedido</div>
             <div className="text-2xl font-semibold">{order.publicId}</div>
-            <div className="mt-2">
+            <div className="mt-2 flex flex-wrap gap-2">
               <StatusPill status={order.status} />
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs">
+                Pagamento: {paymentStatusLabel(order.paymentStatus)}
+              </span>
             </div>
           </div>
 
@@ -76,10 +80,10 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
             <div className="text-sm font-semibold">Atualizar status</div>
             <div className="mt-2 flex gap-2">
               <Select value={status} onChange={(e) => setStatus(e.target.value)}>
-                <option value="PENDING">Pendente</option>
-                <option value="PAID">Pago</option>
-                <option value="SHIPPED">Enviado</option>
-                <option value="CANCELLED">Cancelado</option>
+                <option value="PENDING">{orderStatusLabel("PENDING")}</option>
+                <option value="PAID">{orderStatusLabel("PAID")}</option>
+                <option value="SHIPPED">{orderStatusLabel("SHIPPED")}</option>
+                <option value="CANCELLED">{orderStatusLabel("CANCELLED")}</option>
               </Select>
               <Button disabled={loading} onClick={updateStatus}>
                 {loading ? "..." : "Salvar"}

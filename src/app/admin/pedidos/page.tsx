@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { StatusPill } from "@/components/admin/StatusPill";
 import { formatBRL } from "@/lib/money";
-import { orderStatusLabel } from "@/lib/orderStatus";
+import { orderStatusLabel } from "@/lib/orderLabels";
 
 export default async function AdminPedidosPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const sp = await searchParams;
@@ -38,7 +38,7 @@ export default async function AdminPedidosPage({ searchParams }: { searchParams:
             href={`/admin/pedidos?status=${t}`}
             className={`rounded-xl border px-3 py-1.5 text-xs ${status === t ? "bg-[hsl(var(--accent))] border-[hsl(var(--border))]" : "bg-white border-[hsl(var(--border))]"}`}
           >
-            {t}
+            {orderStatusLabel(t)}
           </Link>
         ))}
       </div>
