@@ -9,6 +9,11 @@ type SearchParams = {
   min?: string;
   max?: string;
   sort?: string;
+
+  featured?: string;
+  new?: string;
+  ready?: string;
+  personalizavel?: string;
 };
 
 function toInt(v?: string, fallback?: number) {
@@ -24,6 +29,11 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const min = toInt(sp.min, undefined);
   const max = toInt(sp.max, undefined);
   const sort = sp.sort || "new";
+  const featured = sp.featured === "1";
+  const isNew = sp.new === "1";
+  const ready = sp.ready === "1";
+  const personalizavel = sp.personalizavel === "1";
+
 
   const categories = await prisma.category.findMany({
     where: { isActive: true },
@@ -35,16 +45,20 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
       isActive: true,
       ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
       ...(cat ? { category: { slug: cat } } : {}),
+      ...(featured ? { isFeatured: true } : {}),
+      ...(isNew ? { isNew: true } : {}),
+      ...(personalizavel ? { isPersonalized: true } : {}),
+      ...(ready ? { productionDays: { lte: 1 } } : {}),
       ...(min != null || max != null
         ? {
-            variants: {
-              some: {
-                isActive: true,
-                ...(min != null ? { priceCents: { gte: min * 100 } } : {}),
-                ...(max != null ? { priceCents: { lte: max * 100 } } : {}),
-              },
+          variants: {
+            some: {
+              isActive: true,
+              ...(min != null ? { priceCents: { gte: min * 100 } } : {}),
+              ...(max != null ? { priceCents: { lte: max * 100 } } : {}),
             },
-          }
+          },
+        }
         : {}),
     },
     include: {
@@ -52,18 +66,26 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
       variants: { where: { isActive: true }, orderBy: { priceCents: "asc" }, take: 1 },
       category: true,
     },
-    orderBy: sort === "new" ? { createdAt: "desc" } : { createdAt: "desc" },
+    orderBy: { createdAt: "desc" },
   });
+
+  // Ordenar por preço em memória
+  if (sort === "price_asc") {
+    products.sort((a, b) => (a.variants[0]?.priceCents ?? 0) - (b.variants[0]?.priceCents ?? 0));
+  } else if (sort === "price_desc") {
+    products.sort((a, b) => (b.variants[0]?.priceCents ?? 0) - (a.variants[0]?.priceCents ?? 0));
+  }
+
 
   const ids = products.map((p) => p.id);
   const grouped =
     ids.length > 0
       ? await prisma.review.groupBy({
-          by: ["productId"],
-          where: { productId: { in: ids }, approved: true },
-          _avg: { rating: true },
-          _count: { rating: true },
-        })
+        by: ["productId"],
+        where: { productId: { in: ids }, approved: true },
+        _avg: { rating: true },
+        _count: { rating: true },
+      })
       : [];
 
   const ratingMap = new Map(
@@ -94,9 +116,10 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
     .filter(Boolean) as any[];
 
   const railTitle =
-    q || cat || sp.min || sp.max
+    q || cat || sp.min || sp.max || featured || isNew || ready || personalizavel
       ? "Resultados (arraste para ver mais)"
       : "Produtos (arraste para ver mais)";
+
 
   return (
     <div className="container py-8 md:py-10">

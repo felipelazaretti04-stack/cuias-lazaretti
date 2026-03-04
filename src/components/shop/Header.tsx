@@ -1,6 +1,7 @@
+// file: src/components/shop/Header.tsx
 import Link from "next/link";
 import { getCart } from "@/lib/cart";
-import { ShoppingBag, UserRound } from "lucide-react";
+import { ShoppingBag } from "lucide-react";
 import { SearchBar } from "@/components/shop/SearchBar";
 import { MobileMenu } from "@/components/shop/MobileMenu";
 
@@ -10,7 +11,7 @@ export async function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-[hsl(var(--border))] bg-white/75 backdrop-blur">
-      <div className="container grid grid-cols-2 items-center gap-3 py-3 md:grid-cols-3">
+      <div className="container relative grid grid-cols-2 items-center gap-3 py-3 md:grid-cols-3">
         <Link href="/" className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--accent))]" />
           <div className="leading-tight">
@@ -24,6 +25,9 @@ export async function Header() {
         </div>
 
         <div className="flex items-center justify-end gap-2">
+          {/* menu hambúrguer (somente mobile) */}
+          <MobileMenu />
+
           <Link
             href="/carrinho"
             className="relative inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-3 py-2 text-sm font-medium text-white hover:opacity-95"
@@ -40,15 +44,21 @@ export async function Header() {
         </div>
       </div>
 
-      {/* nav secundário */}
-      <div className="border-t border-[hsl(var(--border))] bg-white">
+      {/* nav secundário (desktop) */}
+      <div className="hidden border-t border-[hsl(var(--border))] bg-white md:block">
         <div className="container flex items-center justify-between py-2 text-sm">
           <div className="flex gap-4">
-            <Link href="/produtos?cat=cuias" className="hover:opacity-80">Cuias</Link>
-            <Link href="/produtos?cat=bombas" className="hover:opacity-80">Bombas</Link>
-            <Link href="/produtos?cat=acessorios" className="hover:opacity-80">Acessórios</Link>
+            <Link href="/produtos?cat=cuias" className="hover:opacity-80">
+              Cuias
+            </Link>
+            <Link href="/produtos?cat=bombas" className="hover:opacity-80">
+              Bombas
+            </Link>
+            <Link href="/produtos?cat=acessorios" className="hover:opacity-80">
+              Acessórios
+            </Link>
           </div>
-          <div className="text-xs text-[hsl(var(--muted))] hidden md:block">
+          <div className="hidden text-xs text-[hsl(var(--muted))] md:block">
             Pagamento seguro • Checkout Mercado Pago
           </div>
         </div>
