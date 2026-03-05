@@ -1,452 +1,549 @@
-// file: prisma/seed.ts
-import { PrismaClient, UserRole } from "@prisma/client";
-import bcrypt from "bcryptjs";
+"use client";
 
-const prisma = new PrismaClient();
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { AdminShell } from "@/components/admin/AdminShell";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Label } from "@/components/ui/Label";
+import { Select } from "@/components/ui/Select";
+import { Textarea } from "@/components/ui/Textarea";
+import { MediaPicker } from "@/components/admin/MediaPicker";
+import { CameraUploadButton } from "@/components/admin/CameraUploadButton";
 
-// ========== SUAS IMAGENS DO CLOUDINARY ==========
-const GALLERY = [
-  "https://res.cloudinary.com/dwykaetby/image/upload/v1772712180/cuias-lazaretti/dai3tjxbcknuqaulclrf.webp",
-  "https://res.cloudinary.com/dwykaetby/image/upload/v1772712162/cuias-lazaretti/guskzhpqkyeglnb0wgio.webp",
-  "https://res.cloudinary.com/dwykaetby/image/upload/v1772712032/cuias-lazaretti/s0nfxokfnlmix7xfsdws.webp",
-  "https://res.cloudinary.com/dwykaetby/image/upload/v1772711797/cuias-lazaretti/gv9jw0hgo723mvugfhbc.jpg",
-  "https://res.cloudinary.com/dwykaetby/image/upload/v1772711780/cuias-lazaretti/ra4axci79qq8qfb9uwye.jpg",
-  "https://res.cloudinary.com/dwykaetby/image/upload/v1772711757/cuias-lazaretti/oyk2rzvc8osvci91nqr4.jpg",
-  "https://res.cloudinary.com/dwykaetby/image/upload/v1772711709/cuias-lazaretti/ajkwdgwu2msdoybj2g18.jpg",
-  "https://res.cloudinary.com/dwykaetby/image/upload/v1772711675/cuias-lazaretti/qb0ikdh5pkmnqaswvbsx.jpg",
-];
+type Category = { id: string; name: string };
 
-function pickImg(i: number) {
-  const url = GALLERY[i % GALLERY.length];
-  return [{ url, alt: "Produto Cuias Lazaretti", sortOrder: 0 }];
-}
+type VariantDraft = {
+  sku: string;
+  size?: string | null;
+  finish?: string | null;
+  color?: string | null;
+  personalization?: string | null;
+  priceCents: string; // input
+  compareAtCents?: string; // input
+  stock: string; // input
+  isActive: boolean;
+};
 
-function slugify(input: string) {
-  return input
+type ImageDraft = { url: string; alt?: string; sortOrder: string };
+
+const SIZE_OPTIONS = ["Pequeno", "Médio", "Grande", "Extra Grande"] as const;
+const FINISH_OPTIONS = ["Lisa", "Trabalhada", "Pintada", "Resinada"] as const;
+const COLOR_OPTIONS = ["Natural", "Marrom", "Preta", "Verde", "Personalizada"] as const;
+const PERSONAL_OPTIONS = ["Sim", "Não"] as const;
+
+function slugify(s: string) {
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)+/g, "");
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
 }
 
-function skuSafe(input: string) {
-  return (input || "")
-    .toUpperCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^A-Z0-9]+/g, "-")
-    .replace(/(^-|-$)+/g, "")
-    .slice(0, 30);
-}
+export default function NovoProdutoPage() {
+  const router = useRouter();
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [err, setErr] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-// SKU determinístico: CLZ-<produto>-<variante>-<hash curto>
-function makeSku(productSlug: string, variantLabel: string, index: number) {
-  const base = ["CLZ", skuSafe(productSlug).slice(0, 20), skuSafe(variantLabel)].filter(Boolean).join("-");
-  const hash = String(index).padStart(3, "0");
-  return `${base}-${hash}`.slice(0, 50);
-}
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [categoryId, setCategoryId] = useState<string>("");
 
-async function main() {
-  // ========== ADMIN USER ==========
-  const adminEmail = process.env.SEED_ADMIN_EMAIL || "admin@cuiaslazaretti.com.br";
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "TROCAR_EM_PRODUCAO";
-  const passwordHash = await bcrypt.hash(adminPassword, 10);
+  const [description, setDescription] = useState("");
+  const [care, setCare] = useState("");
 
-  await prisma.user.upsert({
-    where: { email: adminEmail },
-    update: { passwordHash, role: UserRole.ADMIN },
-    create: { email: adminEmail, passwordHash, role: UserRole.ADMIN },
-  });
+  const [isPersonalized, setIsPersonalized] = useState(false);
+  const [productionDays, setProductionDays] = useState("0");
 
-  // ========== 4 CATEGORIAS ==========
-  const catCuia = await prisma.category.upsert({
-    where: { slug: "cuias" },
-    update: {},
-    create: { name: "Cuias", slug: "cuias", isActive: true, sortOrder: 1 },
-  });
+  const [isActive, setIsActive] = useState(true);
+  const [isFeatured, setIsFeatured] = useState(false);
+  const [isNew, setIsNew] = useState(true);
 
-  const catBombas = await prisma.category.upsert({
-    where: { slug: "bombas" },
-    update: {},
-    create: { name: "Bombas", slug: "bombas", isActive: true, sortOrder: 2 },
-  });
+  const [images, setImages] = useState<ImageDraft[]>([{ url: "", alt: "", sortOrder: "0" }]);
 
-  const catFacas = await prisma.category.upsert({
-    where: { slug: "facas" },
-    update: {},
-    create: { name: "Facas", slug: "facas", isActive: true, sortOrder: 3 },
-  });
+  const [variants, setVariants] = useState<VariantDraft[]>([
+    {
+      sku: "",
+      size: "Médio",
+      finish: "Lisa",
+      color: "Marrom",
+      personalization: "Não",
+      priceCents: "14990",
+      compareAtCents: "",
+      stock: "10",
+      isActive: true,
+    },
+  ]);
 
-  const catAcess = await prisma.category.upsert({
-    where: { slug: "acessorios" },
-    update: {},
-    create: { name: "Acessórios", slug: "acessorios", isActive: true, sortOrder: 4 },
-  });
+  useEffect(() => {
+    fetch("/api/admin/categorias")
+      .then((r) => r.json())
+      .then((d) => setCategories(d.categories || []))
+      .catch(() => setCategories([]));
+  }, []);
 
-  console.log("✅ Categorias criadas");
-
-  // ========== TIPOS ==========
-  type SeedProduct = {
-    name: string;
-    categoryId: string;
-    description: string;
-    care: string | null;
-    isPersonalized: boolean;
-    productionDays: number;
-    isFeatured: boolean;
-    isNew: boolean;
-    images: { url: string; alt: string; sortOrder: number }[];
-    variants: Array<{
-      label: string;
-      size?: string | null;
-      finish?: string | null;
-      color?: string | null;
-      personalization?: string | null;
-      priceCents: number;
-      compareAtCents?: number | null;
-      stock: number;
-      isActive?: boolean;
-    }>;
-  };
-
-  const productsToCreate: SeedProduct[] = [];
-
-  // --- Nomes ---
-  const cuiaNames = [
-    "Cuia Torpedo Premium — Lisa",
-    "Cuia Torpedo Premium — Trabalhada",
-    "Cuia Gajeta — Lisa",
-    "Cuia Gajeta — Resinada",
-    "Cuia Coquinho — Pintada",
-    "Cuia Entalhada — Personalizável",
-    "Cuia Premium Preta — Lisa",
-    "Cuia Verde Musgo — Trabalhada",
-  ];
-
-  const bombaNames = [
-    "Bomba Inox — Bico Fino",
-    "Bomba Inox — Bico Largo",
-    "Bomba Alpaca — Premium",
-    "Bomba Inox — Desmontável",
-  ];
-
-  const facaNames = [
-    "Faca Campeira — Cabo Madeira",
-    "Faca Gaúcha — Full Tang",
-    "Faca Artesanal — Bainha Couro",
-    "Faca Picanheira — Premium",
-  ];
-
-  const acessNames = [
-    "Kit Limpeza para Bomba",
-    "Porta Erva — Couro",
-    "Porta Cuia — Couro",
-    "Escovinha de Limpeza",
-  ];
-
-  // --- Funções de criação ---
-  function addCuia(i: number, name: string) {
-    const personalized = name.toLowerCase().includes("personaliz");
-    const finish = name.includes("Trabalhada")
-      ? "Trabalhada"
-      : name.includes("Resinada")
-      ? "Resinada"
-      : name.includes("Pintada")
-      ? "Pintada"
-      : "Lisa";
-
-    productsToCreate.push({
-      name,
-      categoryId: catCuia.id,
-      description: "Acabamento premium e pegada confortável. Feita pra mate diário com presença.",
-      care: "Evite imersão prolongada. Seque após uso. Não usar lava-louças.",
-      isPersonalized: personalized,
-      productionDays: personalized ? 5 : 0,
-      isFeatured: i < 4,
-      isNew: i % 2 === 0,
-      images: pickImg(i),
-      variants: [
-        {
-          label: `M-${finish}`,
-          size: "Médio",
-          finish,
-          color: i % 3 === 0 ? "Marrom" : i % 3 === 1 ? "Natural" : "Preta",
-          personalization: personalized ? "Sim" : "Não",
-          priceCents: 14990 + i * 500,
-          compareAtCents: 17990 + i * 500,
-          stock: 8 + (i % 7),
-          isActive: true,
-        },
-        {
-          label: `G-${finish}`,
-          size: "Grande",
-          finish,
-          color: i % 3 === 0 ? "Marrom" : i % 3 === 1 ? "Natural" : "Preta",
-          personalization: personalized ? "Sim" : "Não",
-          priceCents: 15990 + i * 500,
-          compareAtCents: 18990 + i * 500,
-          stock: 5 + (i % 6),
-          isActive: true,
-        },
-      ],
-    });
-  }
-
-  function addBomba(i: number, name: string) {
-    const finish = name.toLowerCase().includes("alpaca") ? "Alpaca" : "Inox";
-    productsToCreate.push({
-      name,
-      categoryId: catBombas.id,
-      description: "Fluxo firme e fácil de limpar. Material resistente e acabamento elegante.",
-      care: "Lave após uso. Evite abrasivos fortes.",
-      isPersonalized: false,
-      productionDays: 0,
-      isFeatured: i < 2,
-      isNew: true,
-      images: pickImg(i + 2),
-      variants: [
-        {
-          label: finish,
-          finish,
-          color: "Prata",
-          personalization: "Não",
-          priceCents: 6990 + i * 800,
-          compareAtCents: 8990 + i * 800,
-          stock: 18 + (i % 10),
-          isActive: true,
-        },
-      ],
-    });
-  }
-
-  function addFaca(i: number, name: string) {
-    productsToCreate.push({
-      name,
-      categoryId: catFacas.id,
-      description: "Corte preciso com pegada firme. Peça premium pra quem valoriza ferramenta boa.",
-      care: "Seque após uso. Evite guardar úmida. Afiar periodicamente.",
-      isPersonalized: false,
-      productionDays: 0,
-      isFeatured: i < 2,
-      isNew: i % 2 === 0,
-      images: pickImg(i + 4),
-      variants: [
-        {
-          label: "UN",
-          finish: "Aço",
-          color: "Madeira",
-          personalization: "Não",
-          priceCents: 15990 + i * 1200,
-          compareAtCents: null,
-          stock: 3 + (i % 4),
-          isActive: true,
-        },
-      ],
-    });
-  }
-
-  function addAcess(i: number, name: string) {
-    productsToCreate.push({
-      name,
-      categoryId: catAcess.id,
-      description: "Acessório essencial pra teu mate ficar completo e bem cuidado.",
-      care: null,
-      isPersonalized: false,
-      productionDays: 0,
-      isFeatured: false,
-      isNew: false,
-      images: pickImg(i + 6),
-      variants: [
-        {
-          label: "UN",
-          personalization: "Não",
-          priceCents: 2990 + i * 700,
-          compareAtCents: null,
-          stock: 20 + (i % 25),
-          isActive: true,
-        },
-      ],
-    });
-  }
-
-  // --- Montar 20 produtos ---
-  cuiaNames.forEach((n, i) => addCuia(i, n));   // 8 cuias (16 variantes)
-  bombaNames.forEach((n, i) => addBomba(i, n)); // 4 bombas
-  facaNames.forEach((n, i) => addFaca(i, n));   // 4 facas
-  acessNames.forEach((n, i) => addAcess(i, n)); // 4 acessórios = 20 produtos
-
-  // --- Criar no banco (recria variantes) ---
-  let skuCounter = 0;
-
-  for (const p of productsToCreate) {
-    const productSlug = slugify(p.name);
-    const existing = await prisma.product.findUnique({ where: { slug: productSlug } });
-
-    const product = existing
-      ? await prisma.product.update({
-          where: { id: existing.id },
-          data: {
-            name: p.name,
-            description: p.description,
-            care: p.care ?? null,
-            isPersonalized: p.isPersonalized,
-            productionDays: p.productionDays,
-            isFeatured: p.isFeatured,
-            isNew: p.isNew,
-            isActive: true,
-            categoryId: p.categoryId,
-          },
-        })
-      : await prisma.product.create({
-          data: {
-            name: p.name,
-            slug: productSlug,
-            description: p.description,
-            care: p.care ?? null,
-            isPersonalized: p.isPersonalized,
-            productionDays: p.productionDays,
-            isFeatured: p.isFeatured,
-            isNew: p.isNew,
-            isActive: true,
-            categoryId: p.categoryId,
-          },
-        });
-
-    // Imagens (recria)
-    await prisma.productImage.deleteMany({ where: { productId: product.id } });
-    if (p.images.length) {
-      await prisma.productImage.createMany({
-        data: p.images.map((img) => ({
-          productId: product.id,
-          url: img.url,
-          alt: img.alt ?? null,
-          sortOrder: img.sortOrder ?? 0,
-        })),
-      });
+  // auto slug (mas respeita se o usuário editar manualmente)
+  useEffect(() => {
+    if (!slug.trim() && name.trim().length >= 2) {
+      setSlug(slugify(name));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name]);
 
-    // Variantes (recria: simples e idempotente)
-    await prisma.variant.deleteMany({ where: { productId: product.id } });
-    for (const v of p.variants) {
-      skuCounter++;
-      const sku = makeSku(productSlug, v.label, skuCounter);
-
-      await prisma.variant.create({
-        data: {
-          productId: product.id,
-          sku,
-          size: v.size ?? null,
-          finish: v.finish ?? null,
-          color: v.color ?? null,
-          personalization: v.personalization ?? null,
-          priceCents: v.priceCents,
-          compareAtCents: v.compareAtCents ?? null,
-          stock: v.stock,
-          isActive: v.isActive ?? true,
-        },
-      });
+  const canSave = useMemo(() => {
+    if (name.trim().length < 2) return false;
+    if (slug.trim().length < 2) return false;
+    if (!variants.length) return false;
+    for (const v of variants) {
+      // SKU pode ser vazio: será gerado no backend
+      // if (v.sku.trim().length < 2) return false;
+      const price = Number(v.priceCents);
+      const stock = Number(v.stock);
+      if (!Number.isFinite(price) || price < 1) return false;
+      if (!Number.isFinite(stock) || stock < 0) return false;
     }
-  }
+    return true;
+  }, [name, slug, variants]);
 
-  console.log(`✅ ${productsToCreate.length} produtos criados`);
-
-  // ========== SiteContent singleton + TrustBar ==========
-  const trust = [
-    { title: "Acabamento premium", desc: "Detalhes que aparecem ao vivo." },
-    { title: "Personalização sob medida", desc: "Prazo claro e produção artesanal." },
-    { title: "Envio Brasil + retirada", desc: "PAC + retirada em Erechim/RS." },
-    { title: "Compra segura", desc: "Checkout Pro Mercado Pago." },
-  ];
-
-  const existingContent = await prisma.siteContent.findFirst();
-  if (!existingContent) {
-    await prisma.siteContent.create({
-      data: {
-        heroTitle: "A cuia certa pro teu mate.",
-        heroSubtitle:
-          "Cuias premium, bombas e acessórios com estética clean. Envio Brasil + retirada em Erechim/RS.",
-        heroBadgeText: "Artesanal Premium • Sul do Brasil",
-        heroPrimaryButtonText: "Comprar agora",
-        heroPrimaryButtonLink: "/produtos",
-        heroSecondaryButtonText: "Ver cuias",
-        heroSecondaryButtonLink: "/produtos?cat=cuias",
-        heroImageUrl: null,
-        institutionalTitle: "Personalização que faz sentido",
-        institutionalText:
-          "Escolha a variação personalizável e descreva no checkout. Prazo de produção aparece na página do produto.",
-        institutionalImageUrl: null,
-        scarcityText: "Produção artesanal — prazo médio 3 dias",
-        trustBarJson: trust,
+  function addVariant() {
+    setVariants((v) => [
+      ...v,
+      {
+        sku: "",
+        size: v[0]?.size || "Médio",
+        finish: v[0]?.finish || "Lisa",
+        color: v[0]?.color || "Marrom",
+        personalization: v[0]?.personalization || "Não",
+        priceCents: v[0]?.priceCents || "0",
+        compareAtCents: "",
+        stock: "0",
+        isActive: true,
       },
+    ]);
+  }
+
+  function removeVariant(idx: number) {
+    setVariants((arr) => (arr.length <= 1 ? arr : arr.filter((_, i) => i !== idx)));
+  }
+
+  function addImage() {
+    setImages((imgs) => [...imgs, { url: "", alt: "", sortOrder: String(imgs.length) }]);
+  }
+
+  function addImageFromPicker(url: string) {
+    setImages((imgs) => {
+      // reaproveita primeira linha vazia
+      if (imgs.length === 1 && !imgs[0].url.trim()) {
+        return [{ ...imgs[0], url, sortOrder: imgs[0].sortOrder || "0" }];
+      }
+      return [...imgs, { url, alt: "", sortOrder: String(imgs.length) }];
     });
   }
 
-  // ========== Cupom demo ==========
-  await prisma.coupon.upsert({
-    where: { code: "BEMVINDO10" },
-    update: { active: true, type: "PERCENTAGE", value: 10 },
-    create: { code: "BEMVINDO10", active: true, type: "PERCENTAGE", value: 10 },
-  });
-
-  // ========== HeroSlide (até 5) ==========
-  if ((await prisma.heroSlide.count()) === 0) {
-    await prisma.heroSlide.createMany({
-      data: [
-        {
-          sortOrder: 0,
-          isActive: true,
-          badge: "Artesanal Premium • Sul do Brasil",
-          title: "A cuia certa pro teu mate.",
-          highlight: "premium",
-          subtitle: "Cuias premium, bombas e acessórios com estética clean. Envio Brasil + retirada em Erechim/RS.",
-          primaryText: "Comprar agora",
-          primaryHref: "/produtos",
-          secondaryText: "Ver cuias",
-          secondaryHref: "/produtos?cat=cuias",
-        },
-        {
-          sortOrder: 1,
-          isActive: true,
-          badge: "Personalização sob medida",
-          title: "Presente que vira",
-          highlight: "memória",
-          subtitle: "Escolhe a peça e descreve a personalização no checkout. Nós cuidamos do resto.",
-          primaryText: "Ver personalizáveis",
-          primaryHref: "/produtos?personalizavel=1",
-          secondaryText: "Falar no WhatsApp",
-          secondaryHref: "/contato",
-        },
-        { sortOrder: 2, isActive: true, badge: "Novidades", title: "Chegou agora", highlight: "no site", subtitle: "Reposições e lançamentos — pega antes que acabe.", primaryText: "Ver novidades", primaryHref: "/produtos?new=1" },
-        { sortOrder: 3, isActive: true, badge: "Prontas pra envio", title: "Produção", highlight: "rápida", subtitle: "Peças com prazo 0–1 dia de produção.", primaryText: "Ver prontas", primaryHref: "/produtos?ready=1" },
-        { sortOrder: 4, isActive: true, badge: "Kit Mate", title: "Monte teu", highlight: "combo", subtitle: "Economiza no conjunto e sai com tudo pronto.", primaryText: "Ver combos", primaryHref: "/produtos" },
-      ],
-    });
+  function removeImage(idx: number) {
+    setImages((arr) => (arr.length <= 1 ? [{ url: "", alt: "", sortOrder: "0" }] : arr.filter((_, i) => i !== idx)));
   }
 
-  // ========== HomeRail (5 automáticos) ==========
-  if ((await prisma.homeRail.count()) === 0) {
-    await prisma.homeRail.createMany({
-      data: [
-        { sortOrder: 0, isActive: true, title: "Destaques da semana", subtitle: "Peças premium com acabamento caprichado.", hrefAll: "/produtos?featured=1", type: "FEATURED", limit: 10 },
-        { sortOrder: 1, isActive: true, title: "Novidades", subtitle: "Lançamentos e reposições fresquinhas.", hrefAll: "/produtos?new=1", type: "NEW", limit: 10 },
-        { sortOrder: 2, isActive: true, title: "Mais vendidos", subtitle: "Quando tiver pedidos pagos, isso fica perfeito.", hrefAll: "/produtos", type: "BEST_SELLERS", limit: 10 },
-        { sortOrder: 3, isActive: true, title: "Personalizáveis", subtitle: "Gravação e detalhes que deixam com a tua cara.", hrefAll: "/produtos?personalizavel=1", type: "PERSONALIZED", limit: 10 },
-        { sortOrder: 4, isActive: true, title: "Prontas pra envio", subtitle: "Prazo rápido (0–1 dia).", hrefAll: "/produtos?ready=1", type: "READY_TO_SHIP", limit: 10 },
-      ],
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setErr(null);
+    setOk(null);
+    setLoading(true);
+
+    const payload = {
+      name: name.trim(),
+      slug: slugify(slug),
+
+      categoryId: categoryId || null,
+      description: description ? description : null,
+      care: care ? care : null,
+
+      isActive: !!isActive,
+      isFeatured: !!isFeatured,
+      isNew: !!isNew,
+
+      isPersonalized: !!isPersonalized,
+      productionDays: Number(productionDays) || 0,
+
+      images: images
+        .filter((i) => i.url.trim().length > 0)
+        .map((i) => ({
+          url: i.url.trim(),
+          alt: (i.alt || "").trim() || null,
+          sortOrder: Number(i.sortOrder) || 0,
+        })),
+
+      variants: variants.map((v) => ({
+        sku: v.sku.trim(),
+        priceCents: Number(v.priceCents) || 0,
+        compareAtCents: v.compareAtCents ? Number(v.compareAtCents) : null,
+        stock: Number(v.stock) || 0,
+        isActive: !!v.isActive,
+        size: v.size || null,
+        finish: v.finish || null,
+        color: v.color || null,
+        personalization: v.personalization || null,
+      })),
+    };
+
+    const res = await fetch("/api/admin/produtos", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
     });
+
+    setLoading(false);
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      setErr(data?.error || "Erro ao salvar");
+      return;
+    }
+
+    setOk("Produto criado com sucesso.");
+    router.push("/admin/produtos");
+    router.refresh();
   }
 
-  console.log("🌱 Seed concluído!");
-  console.log(`Admin: ${adminEmail}`);
-  console.log("Senha: (a do SEED_ADMIN_PASSWORD) TROCAR EM PRODUÇÃO");
+  return (
+    <AdminShell title="Novo produto">
+      <form className="grid gap-6" onSubmit={onSubmit}>
+        <div className="card p-5">
+          <div className="text-sm font-semibold">Dados do produto</div>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <div className="space-y-2 md:col-span-2">
+              <Label>Nome</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Cuia Premium Torpedo" />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Slug</Label>
+              <Input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="cuia-premium-torpedo" />
+              <div className="text-[11px] text-[hsl(var(--muted))]">
+                URL: <code>/produtos/{slugify(slug || name)}</code>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Categoria</Label>
+              <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+                <option value="">Sem categoria</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label>Descrição</Label>
+              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={5} />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label>Cuidados</Label>
+              <Textarea value={care} onChange={(e) => setCare(e.target.value)} rows={4} />
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-4 md:grid-cols-4">
+            <div className="space-y-2">
+              <Label>Personalizável</Label>
+              <div className="flex items-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2">
+                <input checked={isPersonalized} onChange={(e) => setIsPersonalized(e.target.checked)} type="checkbox" />
+                <span className="text-sm">Sim</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Prazo produção (dias)</Label>
+              <Input value={productionDays} onChange={(e) => setProductionDays(e.target.value)} inputMode="numeric" />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Ativo</Label>
+              <div className="flex items-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2">
+                <input checked={isActive} onChange={(e) => setIsActive(e.target.checked)} type="checkbox" />
+                <span className="text-sm">Mostrar</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Destaque / Lançamento</Label>
+              <div className="flex flex-col gap-2 rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2">
+                <label className="flex items-center gap-2 text-sm">
+                  <input checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} type="checkbox" /> Destaque
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input checked={isNew} onChange={(e) => setIsNew(e.target.checked)} type="checkbox" /> Novidade
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold">Imagens</div>
+              <div className="text-xs text-[hsl(var(--muted))]">Cole uma URL ou selecione da galeria.</div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <CameraUploadButton onUploaded={addImageFromPicker} />
+              <MediaPicker onPick={addImageFromPicker} />
+              <Button type="button" variant="secondary" onClick={addImage}>
+                Adicionar imagem
+              </Button>
+            </div>
+
+          </div>
+
+          <div className="mt-4 grid gap-3">
+            {images.map((img, idx) => (
+              <div key={idx} className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--bg))] p-4">
+                <div className="grid gap-3 md:grid-cols-6">
+                  <div className="md:col-span-4 space-y-2">
+                    <Label>URL</Label>
+                    <Input
+                      value={img.url}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setImages((arr) => arr.map((it, i) => (i === idx ? { ...it, url: v } : it)));
+                      }}
+                      placeholder="https://..."
+                    />
+                  </div>
+                  <div className="md:col-span-1 space-y-2">
+                    <Label>Ordem</Label>
+                    <Input
+                      value={img.sortOrder}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setImages((arr) => arr.map((it, i) => (i === idx ? { ...it, sortOrder: v } : it)));
+                      }}
+                      inputMode="numeric"
+                    />
+                  </div>
+                  <div className="md:col-span-1 space-y-2">
+                    <Label>Alt</Label>
+                    <Input
+                      value={img.alt || ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setImages((arr) => arr.map((it, i) => (i === idx ? { ...it, alt: v } : it)));
+                      }}
+                      placeholder="Opcional"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-3 flex justify-end">
+                  <button type="button" className="text-xs text-red-700 underline" onClick={() => removeImage(idx)}>
+                    Remover imagem
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold">Variantes</div>
+              <div className="text-xs text-[hsl(var(--muted))]">Preço em centavos (ex.: 14990 = R$ 149,90).</div>
+            </div>
+            <Button type="button" variant="secondary" onClick={addVariant}>
+              Adicionar variante
+            </Button>
+          </div>
+
+          <div className="mt-4 grid gap-4">
+            {variants.map((v, idx) => (
+              <div key={idx} className="rounded-2xl border border-[hsl(var(--border))] bg-white p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="text-sm font-semibold">Variante #{idx + 1}</div>
+                  <button
+                    type="button"
+                    onClick={() => removeVariant(idx)}
+                    className="text-xs text-red-700 underline disabled:opacity-50"
+                    disabled={variants.length <= 1}
+                  >
+                    Remover
+                  </button>
+                </div>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-6">
+                  <div className="md:col-span-2 space-y-2">
+                    <Label>SKU</Label>
+                    <Input
+                      value={v.sku}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, sku: val } : it)));
+                      }}
+                      placeholder="opcional (gerado automaticamente)"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Tamanho</Label>
+                    <select
+                      value={SIZE_OPTIONS.includes((v.size || "") as any) ? (v.size as any) : "Outro"}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, size: val === "Outro" ? "" : val } : it)));
+                      }}
+                      className="w-full rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 text-sm"
+                    >
+                      {SIZE_OPTIONS.map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                      <option value="Outro">Outro</option>
+                    </select>
+                    {SIZE_OPTIONS.includes((v.size || "") as any) ? null : (
+                      <Input
+                        value={v.size || ""}
+                        onChange={(e) => setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, size: e.target.value } : it)))}
+                        placeholder="Digite outro tamanho"
+                      />
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Acabamento</Label>
+                    <select
+                      value={FINISH_OPTIONS.includes((v.finish || "") as any) ? (v.finish as any) : "Outro"}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, finish: val === "Outro" ? "" : val } : it)));
+                      }}
+                      className="w-full rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 text-sm"
+                    >
+                      {FINISH_OPTIONS.map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                      <option value="Outro">Outro</option>
+                    </select>
+                    {FINISH_OPTIONS.includes((v.finish || "") as any) ? null : (
+                      <Input
+                        value={v.finish || ""}
+                        onChange={(e) => setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, finish: e.target.value } : it)))}
+                        placeholder="Digite outro acabamento"
+                      />
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Cor</Label>
+                    <select
+                      value={COLOR_OPTIONS.includes((v.color || "") as any) ? (v.color as any) : "Outro"}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, color: val === "Outro" ? "" : val } : it)));
+                      }}
+                      className="w-full rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 text-sm"
+                    >
+                      {COLOR_OPTIONS.map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                      <option value="Outro">Outro</option>
+                    </select>
+                    {COLOR_OPTIONS.includes((v.color || "") as any) ? null : (
+                      <Input
+                        value={v.color || ""}
+                        onChange={(e) => setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, color: e.target.value } : it)))}
+                        placeholder="Digite outra cor"
+                      />
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Personalização</Label>
+                    <select
+                      value={(v.personalization || "Não") as any}
+                      onChange={(e) => setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, personalization: e.target.value } : it)))}
+                      className="w-full rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 text-sm"
+                    >
+                      {PERSONAL_OPTIONS.map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Preço (cents)</Label>
+                    <Input
+                      value={v.priceCents}
+                      onChange={(e) => setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, priceCents: e.target.value } : it)))}
+                      inputMode="numeric"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Preço promo (cents)</Label>
+                    <Input
+                      value={v.compareAtCents || ""}
+                      onChange={(e) => setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, compareAtCents: e.target.value } : it)))}
+                      inputMode="numeric"
+                      placeholder="opcional"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Estoque</Label>
+                    <Input
+                      value={v.stock}
+                      onChange={(e) => setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, stock: e.target.value } : it)))}
+                      inputMode="numeric"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Ativa</Label>
+                    <div className="flex items-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2">
+                      <input
+                        checked={v.isActive}
+                        onChange={(e) => setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, isActive: e.target.checked } : it)))}
+                        type="checkbox"
+                      />
+                      <span className="text-sm">Sim</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {err ? <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{err}</div> : null}
+        {ok ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">{ok}</div> : null}
+
+        <div className="flex gap-3">
+          <Button type="submit" disabled={!canSave || loading}>
+            {loading ? "Salvando..." : "Salvar produto"}
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => router.back()}>
+            Cancelar
+          </Button>
+        </div>
+      </form>
+    </AdminShell>
+  );
 }
-
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });

@@ -18,7 +18,7 @@ const GALLERY = [
 
 function pickImg(i: number) {
   const url = GALLERY[i % GALLERY.length];
-  return { url, alt: "Produto Cuias Lazaretti", sortOrder: 0 };
+  return [{ url, alt: "Produto Cuias Lazaretti", sortOrder: 0 }];
 }
 
 function slugify(input: string) {
@@ -28,6 +28,23 @@ function slugify(input: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "");
+}
+
+function skuSafe(input: string) {
+  return (input || "")
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "")
+    .slice(0, 30);
+}
+
+// SKU determinístico: CLZ-<produto>-<variante>-<hash curto>
+function makeSku(productSlug: string, variantLabel: string, index: number) {
+  const base = ["CLZ", skuSafe(productSlug).slice(0, 20), skuSafe(variantLabel)].filter(Boolean).join("-");
+  const hash = String(index).padStart(3, "0");
+  return `${base}-${hash}`.slice(0, 50);
 }
 
 async function main() {
@@ -69,8 +86,8 @@ async function main() {
 
   console.log("✅ Categorias criadas");
 
-  // ========== 20 PRODUTOS ==========
-  type ProductDraft = {
+  // ========== TIPOS ==========
+  type SeedProduct = {
     name: string;
     categoryId: string;
     description: string;
@@ -81,7 +98,7 @@ async function main() {
     isNew: boolean;
     images: { url: string; alt: string; sortOrder: number }[];
     variants: Array<{
-      sku: string;
+      label: string;
       size?: string | null;
       finish?: string | null;
       color?: string | null;
@@ -89,10 +106,11 @@ async function main() {
       priceCents: number;
       compareAtCents?: number | null;
       stock: number;
+      isActive?: boolean;
     }>;
   };
 
-  const productsToCreate: ProductDraft[] = [];
+  const productsToCreate: SeedProduct[] = [];
 
   // --- Nomes ---
   const cuiaNames = [
@@ -130,7 +148,14 @@ async function main() {
   // --- Funções de criação ---
   function addCuia(i: number, name: string) {
     const personalized = name.toLowerCase().includes("personaliz");
-    const slug = slugify(name);
+    const finish = name.includes("Trabalhada")
+      ? "Trabalhada"
+      : name.includes("Resinada")
+      ? "Resinada"
+      : name.includes("Pintada")
+      ? "Pintada"
+      : "Lisa";
+
     productsToCreate.push({
       name,
       categoryId: catCuia.id,
@@ -140,30 +165,36 @@ async function main() {
       productionDays: personalized ? 5 : 0,
       isFeatured: i < 4,
       isNew: i % 2 === 0,
-      images: [pickImg(i)],
+      images: pickImg(i),
       variants: [
         {
-          sku: `CLZ-${slug.toUpperCase().slice(0, 25)}-1`,
+          label: `M-${finish}`,
           size: "Médio",
-          finish: name.includes("Trabalhada")
-            ? "Trabalhada"
-            : name.includes("Resinada")
-            ? "Resinada"
-            : name.includes("Pintada")
-            ? "Pintada"
-            : "Lisa",
+          finish,
           color: i % 3 === 0 ? "Marrom" : i % 3 === 1 ? "Natural" : "Preta",
           personalization: personalized ? "Sim" : "Não",
           priceCents: 14990 + i * 500,
           compareAtCents: 17990 + i * 500,
           stock: 8 + (i % 7),
+          isActive: true,
+        },
+        {
+          label: `G-${finish}`,
+          size: "Grande",
+          finish,
+          color: i % 3 === 0 ? "Marrom" : i % 3 === 1 ? "Natural" : "Preta",
+          personalization: personalized ? "Sim" : "Não",
+          priceCents: 15990 + i * 500,
+          compareAtCents: 18990 + i * 500,
+          stock: 5 + (i % 6),
+          isActive: true,
         },
       ],
     });
   }
 
   function addBomba(i: number, name: string) {
-    const slug = slugify(name);
+    const finish = name.toLowerCase().includes("alpaca") ? "Alpaca" : "Inox";
     productsToCreate.push({
       name,
       categoryId: catBombas.id,
@@ -173,23 +204,23 @@ async function main() {
       productionDays: 0,
       isFeatured: i < 2,
       isNew: true,
-      images: [pickImg(i + 2)],
+      images: pickImg(i + 2),
       variants: [
         {
-          sku: `CLZ-${slug.toUpperCase().slice(0, 25)}-1`,
-          finish: name.toLowerCase().includes("alpaca") ? "Alpaca" : "Inox",
+          label: finish,
+          finish,
           color: "Prata",
           personalization: "Não",
           priceCents: 6990 + i * 800,
           compareAtCents: 8990 + i * 800,
           stock: 18 + (i % 10),
+          isActive: true,
         },
       ],
     });
   }
 
   function addFaca(i: number, name: string) {
-    const slug = slugify(name);
     productsToCreate.push({
       name,
       categoryId: catFacas.id,
@@ -199,24 +230,23 @@ async function main() {
       productionDays: 0,
       isFeatured: i < 2,
       isNew: i % 2 === 0,
-      images: [pickImg(i + 4)],
+      images: pickImg(i + 4),
       variants: [
         {
-          sku: `CLZ-${slug.toUpperCase().slice(0, 25)}-1`,
-          size: null,
+          label: "UN",
           finish: "Aço",
           color: "Madeira",
           personalization: "Não",
           priceCents: 15990 + i * 1200,
           compareAtCents: null,
-          stock: 4 + (i % 4),
+          stock: 3 + (i % 4),
+          isActive: true,
         },
       ],
     });
   }
 
   function addAcess(i: number, name: string) {
-    const slug = slugify(name);
     productsToCreate.push({
       name,
       categoryId: catAcess.id,
@@ -226,29 +256,32 @@ async function main() {
       productionDays: 0,
       isFeatured: false,
       isNew: false,
-      images: [pickImg(i + 6)],
+      images: pickImg(i + 6),
       variants: [
         {
-          sku: `CLZ-${slug.toUpperCase().slice(0, 25)}-1`,
+          label: "UN",
+          personalization: "Não",
           priceCents: 2990 + i * 700,
           compareAtCents: null,
           stock: 20 + (i % 25),
-          personalization: "Não",
+          isActive: true,
         },
       ],
     });
   }
 
   // --- Montar 20 produtos ---
-  cuiaNames.forEach((n, i) => addCuia(i, n));
-  bombaNames.forEach((n, i) => addBomba(i, n));
-  facaNames.forEach((n, i) => addFaca(i, n));
-  acessNames.forEach((n, i) => addAcess(i, n));
+  cuiaNames.forEach((n, i) => addCuia(i, n));   // 8 cuias (16 variantes)
+  bombaNames.forEach((n, i) => addBomba(i, n)); // 4 bombas
+  facaNames.forEach((n, i) => addFaca(i, n));   // 4 facas
+  acessNames.forEach((n, i) => addAcess(i, n)); // 4 acessórios = 20 produtos
 
-  // --- Criar no banco ---
+  // --- Criar no banco (recria variantes) ---
+  let skuCounter = 0;
+
   for (const p of productsToCreate) {
-    const baseSlug = slugify(p.name);
-    const existing = await prisma.product.findUnique({ where: { slug: baseSlug } });
+    const productSlug = slugify(p.name);
+    const existing = await prisma.product.findUnique({ where: { slug: productSlug } });
 
     const product = existing
       ? await prisma.product.update({
@@ -256,7 +289,7 @@ async function main() {
           data: {
             name: p.name,
             description: p.description,
-            care: p.care ?? undefined,
+            care: p.care ?? null,
             isPersonalized: p.isPersonalized,
             productionDays: p.productionDays,
             isFeatured: p.isFeatured,
@@ -268,9 +301,9 @@ async function main() {
       : await prisma.product.create({
           data: {
             name: p.name,
-            slug: baseSlug,
+            slug: productSlug,
             description: p.description,
-            care: p.care ?? undefined,
+            care: p.care ?? null,
             isPersonalized: p.isPersonalized,
             productionDays: p.productionDays,
             isFeatured: p.isFeatured,
@@ -280,18 +313,29 @@ async function main() {
           },
         });
 
-    // Imagens
+    // Imagens (recria)
     await prisma.productImage.deleteMany({ where: { productId: product.id } });
-    await prisma.productImage.createMany({
-      data: p.images.map((img) => ({ ...img, productId: product.id })),
-    });
+    if (p.images.length) {
+      await prisma.productImage.createMany({
+        data: p.images.map((img) => ({
+          productId: product.id,
+          url: img.url,
+          alt: img.alt ?? null,
+          sortOrder: img.sortOrder ?? 0,
+        })),
+      });
+    }
 
-    // Variantes
+    // Variantes (recria: simples e idempotente)
+    await prisma.variant.deleteMany({ where: { productId: product.id } });
     for (const v of p.variants) {
-      await prisma.variant.upsert({
-        where: { sku: v.sku },
-        update: {
+      skuCounter++;
+      const sku = makeSku(productSlug, v.label, skuCounter);
+
+      await prisma.variant.create({
+        data: {
           productId: product.id,
+          sku,
           size: v.size ?? null,
           finish: v.finish ?? null,
           color: v.color ?? null,
@@ -299,19 +343,7 @@ async function main() {
           priceCents: v.priceCents,
           compareAtCents: v.compareAtCents ?? null,
           stock: v.stock,
-          isActive: true,
-        },
-        create: {
-          productId: product.id,
-          sku: v.sku,
-          size: v.size ?? null,
-          finish: v.finish ?? null,
-          color: v.color ?? null,
-          personalization: v.personalization ?? null,
-          priceCents: v.priceCents,
-          compareAtCents: v.compareAtCents ?? null,
-          stock: v.stock,
-          isActive: true,
+          isActive: v.isActive ?? true,
         },
       });
     }
