@@ -33,6 +33,7 @@ export async function createMercadoPagoPreference(input: {
       // Pix + Cartão (remove boleto)
       payment_methods: {
         excluded_payment_types: [{ id: "ticket" }],
+        default_payment_method_id: "pix", // Força Pix como padrão
       },
     }),
     cache: "no-store",
