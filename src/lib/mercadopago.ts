@@ -30,6 +30,10 @@ export async function createMercadoPagoPreference(input: {
       auto_return: "approved",
       notification_url: input.notificationUrl,
       statement_descriptor: "CUIAS LAZARETTI",
+      // Pix + Cartão (remove boleto)
+      payment_methods: {
+        excluded_payment_types: [{ id: "ticket" }],
+      },
     }),
     cache: "no-store",
   });
