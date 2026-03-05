@@ -1,7 +1,25 @@
+// file: prisma/seed.ts
 import { PrismaClient, UserRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
+
+// ========== SUAS IMAGENS DO CLOUDINARY ==========
+const GALLERY = [
+  "https://res.cloudinary.com/dwykaetby/image/upload/v1772712180/cuias-lazaretti/dai3tjxbcknuqaulclrf.webp",
+  "https://res.cloudinary.com/dwykaetby/image/upload/v1772712162/cuias-lazaretti/guskzhpqkyeglnb0wgio.webp",
+  "https://res.cloudinary.com/dwykaetby/image/upload/v1772712032/cuias-lazaretti/s0nfxokfnlmix7xfsdws.webp",
+  "https://res.cloudinary.com/dwykaetby/image/upload/v1772711797/cuias-lazaretti/gv9jw0hgo723mvugfhbc.jpg",
+  "https://res.cloudinary.com/dwykaetby/image/upload/v1772711780/cuias-lazaretti/ra4axci79qq8qfb9uwye.jpg",
+  "https://res.cloudinary.com/dwykaetby/image/upload/v1772711757/cuias-lazaretti/oyk2rzvc8osvci91nqr4.jpg",
+  "https://res.cloudinary.com/dwykaetby/image/upload/v1772711709/cuias-lazaretti/ajkwdgwu2msdoybj2g18.jpg",
+  "https://res.cloudinary.com/dwykaetby/image/upload/v1772711675/cuias-lazaretti/qb0ikdh5pkmnqaswvbsx.jpg",
+];
+
+function pickImg(i: number) {
+  const url = GALLERY[i % GALLERY.length];
+  return { url, alt: "Produto Cuias Lazaretti", sortOrder: 0 };
+}
 
 function slugify(input: string) {
   return input
@@ -13,9 +31,9 @@ function slugify(input: string) {
 }
 
 async function main() {
+  // ========== ADMIN USER ==========
   const adminEmail = process.env.SEED_ADMIN_EMAIL || "admin@cuiaslazaretti.com.br";
   const adminPassword = process.env.SEED_ADMIN_PASSWORD || "TROCAR_EM_PRODUCAO";
-
   const passwordHash = await bcrypt.hash(adminPassword, 10);
 
   await prisma.user.upsert({
@@ -24,6 +42,7 @@ async function main() {
     create: { email: adminEmail, passwordHash, role: UserRole.ADMIN },
   });
 
+  // ========== 4 CATEGORIAS ==========
   const catCuia = await prisma.category.upsert({
     where: { slug: "cuias" },
     update: {},
@@ -36,154 +55,198 @@ async function main() {
     create: { name: "Bombas", slug: "bombas", isActive: true, sortOrder: 2 },
   });
 
+  const catFacas = await prisma.category.upsert({
+    where: { slug: "facas" },
+    update: {},
+    create: { name: "Facas", slug: "facas", isActive: true, sortOrder: 3 },
+  });
+
   const catAcess = await prisma.category.upsert({
     where: { slug: "acessorios" },
     update: {},
-    create: { name: "Acessórios", slug: "acessorios", isActive: true, sortOrder: 3 },
+    create: { name: "Acessórios", slug: "acessorios", isActive: true, sortOrder: 4 },
   });
 
-  const products = [
-    {
-      name: "Cuia Premium Torpedo — Lisa",
+  console.log("✅ Categorias criadas");
+
+  // ========== 20 PRODUTOS ==========
+  type ProductDraft = {
+    name: string;
+    categoryId: string;
+    description: string;
+    care: string | null;
+    isPersonalized: boolean;
+    productionDays: number;
+    isFeatured: boolean;
+    isNew: boolean;
+    images: { url: string; alt: string; sortOrder: number }[];
+    variants: Array<{
+      sku: string;
+      size?: string | null;
+      finish?: string | null;
+      color?: string | null;
+      personalization?: string | null;
+      priceCents: number;
+      compareAtCents?: number | null;
+      stock: number;
+    }>;
+  };
+
+  const productsToCreate: ProductDraft[] = [];
+
+  // --- Nomes ---
+  const cuiaNames = [
+    "Cuia Torpedo Premium — Lisa",
+    "Cuia Torpedo Premium — Trabalhada",
+    "Cuia Gajeta — Lisa",
+    "Cuia Gajeta — Resinada",
+    "Cuia Coquinho — Pintada",
+    "Cuia Entalhada — Personalizável",
+    "Cuia Premium Preta — Lisa",
+    "Cuia Verde Musgo — Trabalhada",
+  ];
+
+  const bombaNames = [
+    "Bomba Inox — Bico Fino",
+    "Bomba Inox — Bico Largo",
+    "Bomba Alpaca — Premium",
+    "Bomba Inox — Desmontável",
+  ];
+
+  const facaNames = [
+    "Faca Campeira — Cabo Madeira",
+    "Faca Gaúcha — Full Tang",
+    "Faca Artesanal — Bainha Couro",
+    "Faca Picanheira — Premium",
+  ];
+
+  const acessNames = [
+    "Kit Limpeza para Bomba",
+    "Porta Erva — Couro",
+    "Porta Cuia — Couro",
+    "Escovinha de Limpeza",
+  ];
+
+  // --- Funções de criação ---
+  function addCuia(i: number, name: string) {
+    const personalized = name.toLowerCase().includes("personaliz");
+    const slug = slugify(name);
+    productsToCreate.push({
+      name,
       categoryId: catCuia.id,
-      description:
-        "Acabamento premium e pegada confortável. Ideal pra mate diário com presença.",
+      description: "Acabamento premium e pegada confortável. Feita pra mate diário com presença.",
       care: "Evite imersão prolongada. Seque após uso. Não usar lava-louças.",
-      isPersonalized: false,
-      productionDays: 0,
-      isFeatured: true,
-      isNew: true,
-      images: [
-        {
-          url: "https://images.unsplash.com/photo-1528825871115-3581a5387919?auto=format&fit=crop&w=1600&q=80",
-          alt: "Cuia premium torpedo",
-          sortOrder: 1,
-        },
-      ],
+      isPersonalized: personalized,
+      productionDays: personalized ? 5 : 0,
+      isFeatured: i < 4,
+      isNew: i % 2 === 0,
+      images: [pickImg(i)],
       variants: [
         {
-          sku: "CLZ-CUIA-TORP-LISA-M",
+          sku: `CLZ-${slug.toUpperCase().slice(0, 25)}-1`,
           size: "Médio",
-          finish: "Lisa",
-          color: "Marrom",
-          personalization: "Não",
-          priceCents: 14990,
-          compareAtCents: 17990,
-          stock: 12,
-        },
-        {
-          sku: "CLZ-CUIA-TORP-LISA-G",
-          size: "Grande",
-          finish: "Lisa",
-          color: "Marrom",
-          personalization: "Não",
-          priceCents: 15990,
-          compareAtCents: 18990,
-          stock: 8,
+          finish: name.includes("Trabalhada")
+            ? "Trabalhada"
+            : name.includes("Resinada")
+            ? "Resinada"
+            : name.includes("Pintada")
+            ? "Pintada"
+            : "Lisa",
+          color: i % 3 === 0 ? "Marrom" : i % 3 === 1 ? "Natural" : "Preta",
+          personalization: personalized ? "Sim" : "Não",
+          priceCents: 14990 + i * 500,
+          compareAtCents: 17990 + i * 500,
+          stock: 8 + (i % 7),
         },
       ],
-    },
-    {
-      name: "Cuia Entalhada — Personalizável",
-      categoryId: catCuia.id,
-      description:
-        "Uma peça com alma artesanal. Opção de personalização pra presente (ou pra tua roda de mate).",
-      care: "Evite calor excessivo. Seque após uso. Armazene em local ventilado.",
-      isPersonalized: true,
-      productionDays: 5,
-      isFeatured: true,
-      isNew: false,
-      images: [
-        {
-          url: "https://images.unsplash.com/photo-1519682337058-a94d519337bc?auto=format&fit=crop&w=1600&q=80",
-          alt: "Cuia entalhada",
-          sortOrder: 1,
-        },
-      ],
-      variants: [
-        {
-          sku: "CLZ-CUIA-ENT-M-SIM",
-          size: "Médio",
-          finish: "Entalhada",
-          color: "Verde escuro",
-          personalization: "Sim",
-          priceCents: 19990,
-          compareAtCents: null,
-          stock: 6,
-        },
-        {
-          sku: "CLZ-CUIA-ENT-M-NAO",
-          size: "Médio",
-          finish: "Entalhada",
-          color: "Verde escuro",
-          personalization: "Não",
-          priceCents: 17990,
-          compareAtCents: null,
-          stock: 10,
-        },
-      ],
-    },
-    {
-      name: "Bomba Inox — Bico Fino",
+    });
+  }
+
+  function addBomba(i: number, name: string) {
+    const slug = slugify(name);
+    productsToCreate.push({
+      name,
       categoryId: catBombas.id,
-      description: "Fluxo firme e fácil de limpar. Inox com acabamento elegante.",
+      description: "Fluxo firme e fácil de limpar. Material resistente e acabamento elegante.",
       care: "Lave após uso. Evite abrasivos fortes.",
       isPersonalized: false,
       productionDays: 0,
-      isFeatured: false,
+      isFeatured: i < 2,
       isNew: true,
-      images: [
-        {
-          url: "https://images.unsplash.com/photo-1520975682031-a57d49d2f5d4?auto=format&fit=crop&w=1600&q=80",
-          alt: "Bomba inox bico fino",
-          sortOrder: 1,
-        },
-      ],
+      images: [pickImg(i + 2)],
       variants: [
         {
-          sku: "CLZ-BOMBA-INOX-FINO",
-          size: null,
-          finish: "Inox",
+          sku: `CLZ-${slug.toUpperCase().slice(0, 25)}-1`,
+          finish: name.toLowerCase().includes("alpaca") ? "Alpaca" : "Inox",
           color: "Prata",
           personalization: "Não",
-          priceCents: 6990,
-          compareAtCents: 8990,
-          stock: 25,
+          priceCents: 6990 + i * 800,
+          compareAtCents: 8990 + i * 800,
+          stock: 18 + (i % 10),
         },
       ],
-    },
-    {
-      name: "Kit Limpeza para Bomba",
+    });
+  }
+
+  function addFaca(i: number, name: string) {
+    const slug = slugify(name);
+    productsToCreate.push({
+      name,
+      categoryId: catFacas.id,
+      description: "Corte preciso com pegada firme. Peça premium pra quem valoriza ferramenta boa.",
+      care: "Seque após uso. Evite guardar úmida. Afiar periodicamente.",
+      isPersonalized: false,
+      productionDays: 0,
+      isFeatured: i < 2,
+      isNew: i % 2 === 0,
+      images: [pickImg(i + 4)],
+      variants: [
+        {
+          sku: `CLZ-${slug.toUpperCase().slice(0, 25)}-1`,
+          size: null,
+          finish: "Aço",
+          color: "Madeira",
+          personalization: "Não",
+          priceCents: 15990 + i * 1200,
+          compareAtCents: null,
+          stock: 4 + (i % 4),
+        },
+      ],
+    });
+  }
+
+  function addAcess(i: number, name: string) {
+    const slug = slugify(name);
+    productsToCreate.push({
+      name,
       categoryId: catAcess.id,
-      description: "Escova e acessórios pra manter tua bomba sempre impecável.",
+      description: "Acessório essencial pra teu mate ficar completo e bem cuidado.",
       care: null,
       isPersonalized: false,
       productionDays: 0,
       isFeatured: false,
       isNew: false,
-      images: [
-        {
-          url: "https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?auto=format&fit=crop&w=1600&q=80",
-          alt: "Kit limpeza",
-          sortOrder: 1,
-        },
-      ],
+      images: [pickImg(i + 6)],
       variants: [
         {
-          sku: "CLZ-KIT-LIMPEZA-01",
-          size: null,
-          finish: null,
-          color: null,
-          personalization: "Não",
-          priceCents: 2990,
+          sku: `CLZ-${slug.toUpperCase().slice(0, 25)}-1`,
+          priceCents: 2990 + i * 700,
           compareAtCents: null,
-          stock: 40,
+          stock: 20 + (i % 25),
+          personalization: "Não",
         },
       ],
-    },
-  ];
+    });
+  }
 
-  for (const p of products) {
+  // --- Montar 20 produtos ---
+  cuiaNames.forEach((n, i) => addCuia(i, n));
+  bombaNames.forEach((n, i) => addBomba(i, n));
+  facaNames.forEach((n, i) => addFaca(i, n));
+  acessNames.forEach((n, i) => addAcess(i, n));
+
+  // --- Criar no banco ---
+  for (const p of productsToCreate) {
     const baseSlug = slugify(p.name);
     const existing = await prisma.product.findUnique({ where: { slug: baseSlug } });
 
@@ -217,11 +280,13 @@ async function main() {
           },
         });
 
+    // Imagens
     await prisma.productImage.deleteMany({ where: { productId: product.id } });
     await prisma.productImage.createMany({
       data: p.images.map((img) => ({ ...img, productId: product.id })),
     });
 
+    // Variantes
     for (const v of p.variants) {
       await prisma.variant.upsert({
         where: { sku: v.sku },
@@ -252,7 +317,9 @@ async function main() {
     }
   }
 
-  // ===== SiteContent singleton + TrustBar =====
+  console.log(`✅ ${productsToCreate.length} produtos criados`);
+
+  // ========== SiteContent singleton + TrustBar ==========
   const trust = [
     { title: "Acabamento premium", desc: "Detalhes que aparecem ao vivo." },
     { title: "Personalização sob medida", desc: "Prazo claro e produção artesanal." },
@@ -283,14 +350,14 @@ async function main() {
     });
   }
 
-  // ===== Cupom demo =====
+  // ========== Cupom demo ==========
   await prisma.coupon.upsert({
     where: { code: "BEMVINDO10" },
     update: { active: true, type: "PERCENTAGE", value: 10 },
     create: { code: "BEMVINDO10", active: true, type: "PERCENTAGE", value: 10 },
   });
 
-  // ===== HeroSlide (até 5) =====
+  // ========== HeroSlide (até 5) ==========
   if ((await prisma.heroSlide.count()) === 0) {
     await prisma.heroSlide.createMany({
       data: [
@@ -325,7 +392,7 @@ async function main() {
     });
   }
 
-  // ===== HomeRail (5 automáticos) =====
+  // ========== HomeRail (5 automáticos) ==========
   if ((await prisma.homeRail.count()) === 0) {
     await prisma.homeRail.createMany({
       data: [
@@ -338,7 +405,7 @@ async function main() {
     });
   }
 
-  console.log("Seed concluído.");
+  console.log("🌱 Seed concluído!");
   console.log(`Admin: ${adminEmail}`);
   console.log("Senha: (a do SEED_ADMIN_PASSWORD) TROCAR EM PRODUÇÃO");
 }

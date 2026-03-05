@@ -1,7 +1,43 @@
+// file: src/app/api/admin/produtos/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminSession } from "@/lib/auth";
 import { z } from "zod";
+
+function skuSafe(input: string) {
+  return (input || "")
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "")
+    .slice(0, 30);
+}
+
+function shortRand() {
+  return Math.random().toString(36).slice(2, 6).toUpperCase();
+}
+
+function buildSku(args: {
+  productSlug: string;
+  categorySlug?: string | null;
+  size?: string | null;
+  finish?: string | null;
+  color?: string | null;
+  personalization?: string | null;
+}) {
+  const parts = [
+    "CLZ",
+    skuSafe(args.categorySlug || "PROD"),
+    skuSafe(args.productSlug),
+    args.size ? skuSafe(args.size) : null,
+    args.finish ? skuSafe(args.finish) : null,
+    args.color ? skuSafe(args.color) : null,
+    args.personalization ? skuSafe(args.personalization) : null,
+    shortRand(),
+  ].filter(Boolean);
+  return parts.join("-").slice(0, 80);
+}
 
 export async function GET() {
   const session = await getAdminSession();
@@ -21,7 +57,7 @@ export async function GET() {
 }
 
 const variantSchema = z.object({
-  sku: z.string().min(2).max(80),
+  sku: z.string().max(80).optional().nullable(), // aceita vazio
   priceCents: z.coerce.number().int().min(1),
   compareAtCents: z.coerce.number().int().optional().nullable(),
   stock: z.coerce.number().int().min(0),
@@ -60,7 +96,9 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Dados inválidos", issues: parsed.error.flatten() }, { status: 400 });
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Dados inválidos", issues: parsed.error.flatten() }, { status: 400 });
+  }
 
   try {
     const product = await prisma.$transaction(async (tx) => {
@@ -90,20 +128,44 @@ export async function POST(req: Request) {
         });
       }
 
-      await tx.variant.createMany({
-        data: parsed.data.variants.map((v) => ({
-          productId: p.id,
-          sku: v.sku,
-          priceCents: v.priceCents,
-          compareAtCents: v.compareAtCents ?? null,
-          stock: v.stock,
-          isActive: v.isActive,
-          size: v.size ?? null,
-          finish: v.finish ?? null,
-          color: v.color ?? null,
-          personalization: v.personalization ?? null,
-        })),
-      });
+      // Criar variantes com SKU automático
+      for (const v of parsed.data.variants) {
+        let sku = (v.sku || "").trim();
+        
+        // Se SKU vazio, gera automaticamente
+        if (!sku) {
+          sku = buildSku({
+            productSlug: parsed.data.slug,
+            categorySlug: null,
+            size: v.size ?? null,
+            finish: v.finish ?? null,
+            color: v.color ?? null,
+            personalization: v.personalization ?? null,
+          });
+        }
+
+        // Garante unicidade (tenta até 5x se colidir)
+        for (let i = 0; i < 5; i++) {
+          const exists = await tx.variant.findUnique({ where: { sku } });
+          if (!exists) break;
+          sku = sku.slice(0, 72) + "-" + shortRand();
+        }
+
+        await tx.variant.create({
+          data: {
+            productId: p.id,
+            sku,
+            priceCents: v.priceCents,
+            compareAtCents: v.compareAtCents ?? null,
+            stock: v.stock,
+            isActive: v.isActive,
+            size: v.size ?? null,
+            finish: v.finish ?? null,
+            color: v.color ?? null,
+            personalization: v.personalization ?? null,
+          },
+        });
+      }
 
       return p;
     });

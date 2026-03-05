@@ -100,7 +100,8 @@ export default function NovoProdutoPage() {
     if (slug.trim().length < 2) return false;
     if (!variants.length) return false;
     for (const v of variants) {
-      if (v.sku.trim().length < 2) return false;
+      // SKU pode ser vazio: será gerado no backend
+      // if (v.sku.trim().length < 2) return false;
       const price = Number(v.priceCents);
       const stock = Number(v.stock);
       if (!Number.isFinite(price) || price < 1) return false;
@@ -389,7 +390,7 @@ export default function NovoProdutoPage() {
                         const val = e.target.value;
                         setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, sku: val } : it)));
                       }}
-                      placeholder="CLZ-..."
+                      placeholder="opcional (gerado automaticamente)"
                     />
                   </div>
 
