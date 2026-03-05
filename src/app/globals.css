@@ -4,21 +4,25 @@
 
 :root {
   /* Base quente/premium */
-  --bg: 35 35% 96%;         /* creme quente */
-  --fg: 20 22% 10%;         /* marrom bem escuro */
+  --bg: 35 35% 96%;
+  --fg: 20 22% 10%;
   --muted: 20 10% 38%;
   --card: 0 0% 100%;
   --border: 25 18% 84%;
 
   /* Brand */
-  --primary: 145 18% 20%;   /* verde musgo */
-  --accent: 34 40% 92%;     /* bege */
-  --leather: 24 30% 24%;    /* marrom couro */
-  --gold: 42 62% 52%;       /* dourado */
+  --primary: 145 18% 20%;
+  --accent: 34 40% 92%;
+  --leather: 24 30% 24%;
+  --gold: 42 62% 52%;
 }
 
-html, body { height: 100%; }
-/* fundo com textura suave (sem imagem) */
+/* Fix overflow mobile */
+html, body {
+  height: 100%;
+  overflow-x: hidden;
+}
+
 body {
   background:
     radial-gradient(1200px 500px at 20% -10%, rgba(185, 135, 60, 0.14), transparent 60%),
@@ -26,7 +30,10 @@ body {
     hsl(var(--bg));
 }
 
-.container { @apply mx-auto w-full max-w-6xl px-4; }
+.container {
+  @apply mx-auto w-full max-w-6xl px-4;
+  overflow-x: hidden;
+}
 
 .card {
   @apply rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))];
@@ -36,12 +43,12 @@ body {
   @apply inline-flex items-center gap-1 rounded-full border border-[hsl(var(--border))] bg-white px-2 py-0.5 text-xs text-[hsl(var(--muted))];
 }
 
-/* Tipografia “script” (sem dependência externa): usa fontes locais fallback */
 .font-script {
   font-family: ui-serif, Georgia, "Times New Roman", serif;
   font-style: italic;
   letter-spacing: -0.02em;
 }
 
-/* Hover premium */
-.shadow-soft { box-shadow: 0 10px 30px rgba(20, 10, 5, 0.08); }
+.shadow-soft {
+  box-shadow: 0 10px 30px rgba(20, 10, 5, 0.08);
+}

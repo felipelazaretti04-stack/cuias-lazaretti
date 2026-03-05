@@ -73,7 +73,7 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
   }, [slides]);
 
   return (
-    <section className="container py-6 md:py-10">
+    <section className="container py-6 md:py-10 overflow-hidden">
       <div className="card overflow-hidden shadow-soft">
         <div ref={emblaRef} className="overflow-hidden">
           <div className="flex">
@@ -121,7 +121,7 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
                   </div>
 
                   <div className="absolute inset-0">
-                    <div className="container flex h-full items-center">
+                    <div className="container flex h-full items-center px-4 md:px-6">
                       <div className="max-w-xl py-10 text-white">
                         <div className="badge border-white/20 bg-white/10 text-white">{s.badge}</div>
 
