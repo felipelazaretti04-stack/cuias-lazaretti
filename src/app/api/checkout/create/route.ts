@@ -168,18 +168,21 @@ export async function POST(req: Request) {
 
   // === CRIAR PREFERENCE MERCADO PAGO COM RATEIO ===
   try {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const base = rawAppUrl.trim().replace(/\/+$/, ""); // tira espaços e barra final
+    const backUrl = new URL("/checkout/retorno", base).toString();
+    const notificationUrl = new URL("/api/webhooks/mercadopago", base).toString();
 
+    // log temporário pra confirmar formato em produção (pode tirar depois)
+    console.log("MP URLs", { backUrl, notificationUrl });
     // rateio de desconto no subtotal para MP
     const originalSubtotal = orderItems.reduce((acc, it) => acc + it.lineTotalCents, 0);
     const discountedSubtotal = Math.max(0, originalSubtotal - discountCents);
-
     const mpItems = orderItems.map((it) => ({
       title: `${it.productName}${it.variantLabel ? ` (${it.variantLabel})` : ""}`,
       quantity: it.qty,
       unit_price: Number((it.unitPriceCents / 100).toFixed(2)),
     }));
-
     // aplica rateio se houver desconto
     if (originalSubtotal > 0 && discountCents > 0) {
       let running = 0;
@@ -188,15 +191,12 @@ export async function POST(req: Request) {
         const share = i === orderItems.length - 1
           ? (discountedSubtotal - running)
           : Math.floor((it.lineTotalCents / originalSubtotal) * discountedSubtotal);
-
         running += share;
         const unit = Math.floor(share / it.qty);
         const unitCents = Math.max(1, unit);
-
         mpItems[i].unit_price = Number((unitCents / 100).toFixed(2));
       }
     }
-
     // adiciona frete como item se > 0
     if (selected.priceCents > 0) {
       mpItems.push({
@@ -205,17 +205,16 @@ export async function POST(req: Request) {
         unit_price: Number((selected.priceCents / 100).toFixed(2)),
       });
     }
-
     const pref = await createMercadoPagoPreference({
       orderPublicId: order.publicId,
       items: mpItems,
       payer: { name: parsed.data.customer.name, email: parsed.data.customer.email },
       backUrls: {
-        success: `${appUrl}/checkout/retorno`,
-        pending: `${appUrl}/checkout/retorno`,
-        failure: `${appUrl}/checkout/retorno`,
+        success: backUrl,
+        pending: backUrl,
+        failure: backUrl,
       },
-      notificationUrl: `${appUrl}/api/webhooks/mercadopago`,
+      notificationUrl,
     });
 
     await prisma.order.update({
