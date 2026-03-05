@@ -1,3 +1,4 @@
+// file: src/app/(shop)/pedido/[publicId]/page.tsx
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -7,15 +8,44 @@ import { orderStatusLabel } from "@/lib/orderStatus";
 
 export const dynamic = "force-dynamic";
 
-export default async function PedidoPage({ params }: { params: Promise<{ publicId: string }> }) {
-  const { publicId } = await params;
+type SP = { [key: string]: string | string[] | undefined };
+const pick = (sp: SP, key: string) => (Array.isArray(sp[key]) ? sp[key]?.[0] : sp[key]) ?? "";
 
-  const order = await prisma.order.findUnique({
+export default async function PedidoPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ publicId: string }>;
+  searchParams: Promise<SP>;
+}) {
+  const { publicId } = await params;
+  const sp = await searchParams;
+
+  const paymentId = pick(sp, "payment_id");
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+  // 1) busca pedido
+  let order = await prisma.order.findUnique({
     where: { publicId },
     include: { items: true },
   });
-
   if (!order) return notFound();
+
+  // 2) fallback de confirmação se veio payment_id e ainda não está PAID
+  if (paymentId && order.status !== "PAID") {
+    await fetch(`${appUrl}/api/checkout/confirm`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+      body: JSON.stringify({ publicId, paymentId }),
+    }).catch(() => null);
+
+    order = await prisma.order.findUnique({
+      where: { publicId },
+      include: { items: true },
+    });
+    if (!order) return notFound();
+  }
 
   const isPaid = order.status === "PAID";
   const statusLabel = orderStatusLabel(order.status);

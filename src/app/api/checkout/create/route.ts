@@ -211,9 +211,9 @@ export async function POST(req: Request) {
       items: mpItems,
       payer: { name: parsed.data.customer.name, email: parsed.data.customer.email },
       backUrls: {
-        success: `${appUrl}/pedido/${order.publicId}`,
-        pending: `${appUrl}/pedido/${order.publicId}`,
-        failure: `${appUrl}/pedido/${order.publicId}`,
+        success: `${appUrl}/checkout/retorno`,
+        pending: `${appUrl}/checkout/retorno`,
+        failure: `${appUrl}/checkout/retorno`,
       },
       notificationUrl: `${appUrl}/api/webhooks/mercadopago`,
     });
