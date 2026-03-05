@@ -6,8 +6,8 @@ import pngToIco from "png-to-ico";
 
 const root = process.cwd();
 
-const inputLogo = path.join(root, "assets", "logo-source.png");      // coloque aqui a logo completa (PNG)
-const inputMark = path.join(root, "assets", "logo-mark-source.png"); // coloque aqui a cuia (PNG)
+const inputLogo = path.join(root, "assets", "logo-source.png");
+const inputMark = path.join(root, "assets", "logo-mark-source.png");
 
 const outLogo = path.join(root, "public", "brand", "logo.png");
 const outMark = path.join(root, "public", "brand", "logo-mark.png");
@@ -32,7 +32,7 @@ async function run() {
     throw new Error(`Não encontrei ${inputMark}. Coloque a marca (cuia) em assets/logo-mark-source.png`);
   }
 
-  // Logo alta resolução (padroniza largura, preserva transparência)
+  // Logo alta resolução
   await sharp(inputLogo)
     .resize({ width: 1400, withoutEnlargement: true })
     .png({ compressionLevel: 9 })
@@ -43,43 +43,66 @@ async function run() {
     .png({ compressionLevel: 9 })
     .toFile(outMark);
 
-  // App icon 512x512 usando o mark (sem texto miúdo)
+  // App icon 512x512 - cuia MAIOR (90% do espaço)
   await sharp(inputMark)
-    .resize(420, 420, { fit: "contain" })
+    .resize(480, 480, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .extend({
-      top: 46,
-      bottom: 46,
-      left: 46,
-      right: 46,
-      background: { r: 245, g: 240, b: 230, alpha: 1 }, // creme quente
+      top: 16,
+      bottom: 16,
+      left: 16,
+      right: 16,
+      background: { r: 245, g: 240, b: 230, alpha: 1 },
     })
     .png()
     .toFile(outIcon);
 
-  // Apple icon 180x180
+  // Apple icon 180x180 - cuia MAIOR (90% do espaço)
   await sharp(inputMark)
-    .resize(140, 140, { fit: "contain" })
+    .resize(164, 164, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .extend({
-      top: 20,
-      bottom: 20,
-      left: 20,
-      right: 20,
+      top: 8,
+      bottom: 8,
+      left: 8,
+      right: 8,
       background: { r: 245, g: 240, b: 230, alpha: 1 },
     })
     .png()
     .toFile(outApple);
 
-  // favicon.ico multi-size (16, 32, 48)
+  // favicon.ico - cuia ocupa mais espaço
   const tmp16 = await sharp(inputMark)
-    .resize(16, 16, { fit: "contain" })
+    .resize(14, 14, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .extend({
+      top: 1,
+      bottom: 1,
+      left: 1,
+      right: 1,
+      background: { r: 245, g: 240, b: 230, alpha: 1 },
+    })
     .png()
     .toBuffer();
+
   const tmp32 = await sharp(inputMark)
-    .resize(32, 32, { fit: "contain" })
+    .resize(28, 28, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .extend({
+      top: 2,
+      bottom: 2,
+      left: 2,
+      right: 2,
+      background: { r: 245, g: 240, b: 230, alpha: 1 },
+    })
     .png()
     .toBuffer();
+
   const tmp48 = await sharp(inputMark)
-    .resize(48, 48, { fit: "contain" })
+    .resize(44, 44, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .extend({
+      top: 2,
+      bottom: 2,
+      left: 2,
+      right: 2,
+      background: { r: 245, g: 240, b: 230, alpha: 1 },
+    })
     .png()
     .toBuffer();
 
