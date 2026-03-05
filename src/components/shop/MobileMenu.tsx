@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { Menu, X } from "lucide-react";
 
 export function MobileMenu() {
   const [open, setOpen] = useState(false);
@@ -10,33 +11,52 @@ export function MobileMenu() {
 
   useEffect(() => setOpen(false), [pathname]);
 
+  // Trava scroll do body quando menu aberto
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
+
   return (
     <div className="md:hidden">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[hsl(var(--border))] bg-white"
-        aria-label="Abrir menu"
+        aria-label={open ? "Fechar menu" : "Abrir menu"}
       >
-        <div className="grid gap-1">
-          <span className="block h-0.5 w-5 bg-black" />
-          <span className="block h-0.5 w-5 bg-black" />
-          <span className="block h-0.5 w-5 bg-black" />
-        </div>
+        {open ? <X size={20} /> : <Menu size={20} />}
       </button>
 
-      {open ? (
-        <div className="absolute left-0 right-0 top-[64px] border-b border-[hsl(var(--border))] bg-white">
-          <div className="container py-4">
-            <div className="grid gap-3 text-sm">
-              <Link href="/produtos">Produtos</Link>
-              <Link href="/sobre">Sobre</Link>
-              <Link href="/contato">Contato</Link>
-              <Link href="/produtos?featured=1">Destaques</Link>
+      {open && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 top-[64px] z-40 bg-black/30"
+            onClick={() => setOpen(false)}
+          />
+          
+          {/* Menu */}
+          <div className="fixed left-0 right-0 top-[64px] z-50 border-b border-[hsl(var(--border))] bg-white shadow-lg">
+            <div className="px-4 py-4">
+              <nav className="grid gap-3 text-sm">
+                <Link href="/produtos" className="py-2 hover:text-[hsl(var(--primary))]">
+                  Produtos
+                </Link>
+                <Link href="/produtos?featured=1" className="py-2 hover:text-[hsl(var(--primary))]">
+                  Destaques
+                </Link>
+                <Link href="/sobre" className="py-2 hover:text-[hsl(var(--primary))]">
+                  Sobre
+                </Link>
+                <Link href="/contato" className="py-2 hover:text-[hsl(var(--primary))]">
+                  Contato
+                </Link>
+              </nav>
             </div>
           </div>
-        </div>
-      ) : null}
+        </>
+      )}
     </div>
   );
 }
