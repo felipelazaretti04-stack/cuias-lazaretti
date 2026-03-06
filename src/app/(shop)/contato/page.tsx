@@ -8,9 +8,9 @@ export const metadata: Metadata = {
 
 export default function ContatoPage() {
   // TROQUE AQUI
-  const whatsapp = "https://wa.me/5554999999999";
-  const instagram = "https://instagram.com/cuiaslazaretti";
-  const email = "contato@cuiaslazaretti.com.br";
+  const whatsapp = "https://wa.me/5554999822150";
+  const instagram = "https://www.instagram.com/cuias_lazaretti";
+  const email = "ambrosiolazaretti@hotmail.com";
 
   return (
     <div className="container py-10">
