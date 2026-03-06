@@ -1,18 +1,24 @@
+// file: src/app/api/webhooks/mercadopago/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { fetchMercadoPagoPayment } from "@/lib/mercadopago";
 import { safeLogError } from "@/lib/idempotency";
-
-/**
- * Mercado Pago manda diferentes formatos.
- * Em geral: ?type=payment&data.id=123 ou body { type, data: { id } }
- */
 export async function POST(req: Request) {
   const url = new URL(req.url);
+  
+  // ===== LOG DE DEBUG =====
+  const body = await req.json().catch(() => ({} as any));
+  console.log("MP WEBHOOK HIT", {
+    path: url.pathname,
+    query: Object.fromEntries(url.searchParams.entries()),
+    bodyKeys: body ? Object.keys(body) : [],
+    typeFromBody: body?.type ?? body?.topic,
+    dataIdFromBody: body?.data?.id ?? body?.id,
+  });
+  // ========================
   const typeQ = url.searchParams.get("type") || undefined;
   const dataIdQ = url.searchParams.get("data.id") || undefined;
-
-  const body = await req.json().catch(() => ({} as any));
+  // REMOVIDO: const body = await req.json()... (já lemos acima)
   const type = typeQ || body?.type || body?.topic || "unknown";
   const paymentId = String(dataIdQ || body?.data?.id || body?.id || "").trim();
 
