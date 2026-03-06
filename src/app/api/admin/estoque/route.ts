@@ -1,10 +1,10 @@
 // file: src/app/api/admin/estoque/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/require-admin";
 
 export async function GET(req: Request) {
-  // TODO: adicionar requireAdmin() depois de criar
-  
+  await requireAdmin();  
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get("q") || "").trim();
   const category = (searchParams.get("category") || "").trim();

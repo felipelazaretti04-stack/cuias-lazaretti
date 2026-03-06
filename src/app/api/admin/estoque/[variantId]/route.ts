@@ -1,12 +1,13 @@
 // file: src/app/api/admin/estoque/[variantId]/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/require-admin";
 
 type Ctx = {
   params: Promise<{ variantId: string }>;
 };
-
 export async function PATCH(req: Request, ctx: Ctx) {
+  await requireAdmin();
   const { variantId } = await ctx.params;
   const body = await req.json().catch(() => ({}));
   const stock = Number(body?.stock);
