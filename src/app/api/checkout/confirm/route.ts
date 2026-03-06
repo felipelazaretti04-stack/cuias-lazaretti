@@ -6,24 +6,64 @@ import { safeLogError } from "@/lib/idempotency";
 
 export async function POST(req: Request) {
   try {
-    const body = (await req.json().catch(() => ({}))) as { publicId?: string; paymentId?: string };
-    const publicId = String(body?.publicId || "").trim();
-    const paymentId = String(body?.paymentId || "").trim();
+    const body = await req.json().catch(() => ({} as any));
 
-    if (!publicId || !paymentId) {
-      return NextResponse.json({ ok: false, error: "publicId e paymentId são obrigatórios" }, { status: 400 });
+    const paymentId = String(
+      body?.paymentId ||
+      body?.collection_id ||
+      body?.collectionId ||
+      ""
+    ).trim();
+
+    const externalReference = String(
+      body?.external_reference ||
+      body?.externalReference ||
+      ""
+    ).trim();
+
+    if (!paymentId && !externalReference) {
+      return NextResponse.json(
+        { error: "paymentId ou external_reference é obrigatório" },
+        { status: 400 }
+      );
     }
 
-    const order = await prisma.order.findUnique({ where: { publicId }, include: { items: true } });
-    if (!order) return NextResponse.json({ ok: false, error: "Pedido não encontrado" }, { status: 404 });
-    if (order.status === "PAID") return NextResponse.json({ ok: true, status: "already_paid" });
+    let order = externalReference
+      ? await prisma.order.findUnique({
+          where: { publicId: externalReference },
+          include: { items: true },
+        })
+      : null;
 
-    const payment: any = await fetchMercadoPagoPayment(paymentId);
-    const mpStatus = String(payment?.status || "unknown").toLowerCase();
-    const externalRef = String(payment?.external_reference || "").trim();
+    if (!order && paymentId) {
+      order = await prisma.order.findFirst({
+        where: { mpPaymentId: paymentId },
+        include: { items: true },
+      });
+    }
 
-    if (externalRef && externalRef !== publicId) {
-      return NextResponse.json({ ok: false, error: "Pagamento não corresponde ao pedido" }, { status: 400 });
+    const payment = paymentId ? await fetchMercadoPagoPayment(paymentId) : null;
+    const mpStatus = String(payment?.status || "").toLowerCase();
+    const paymentExternalRef = String(payment?.external_reference || "").trim();
+
+    if (!order && paymentExternalRef) {
+      order = await prisma.order.findUnique({
+        where: { publicId: paymentExternalRef },
+        include: { items: true },
+      });
+    }
+
+    if (!order) {
+      return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 });
+    }
+
+    if (!payment) {
+      return NextResponse.json({
+        ok: true,
+        paid: false,
+        status: order.paymentStatus,
+        orderPublicId: order.publicId,
+      });
     }
 
     const isApproved = mpStatus === "approved";
@@ -35,25 +75,43 @@ export async function POST(req: Request) {
       await prisma.order.update({
         where: { id: order.id },
         data: {
-          paymentStatus: isCancelled ? "CANCELLED" : isRejected ? "REJECTED" : isRefunded ? "REFUNDED" : "PENDING",
-          mpPaymentId: paymentId,
+          mpPaymentId: paymentId || order.mpPaymentId,
+          paymentStatus: isCancelled
+            ? "CANCELLED"
+            : isRejected
+              ? "REJECTED"
+              : isRefunded
+                ? "REFUNDED"
+                : "PENDING",
         },
       });
-      return NextResponse.json({ ok: true, status: mpStatus });
+
+      return NextResponse.json({
+        ok: true,
+        paid: false,
+        status: mpStatus || "pending",
+        orderPublicId: order.publicId,
+      });
     }
 
     await prisma.$transaction(async (tx) => {
-      const fresh = await tx.order.findUnique({ where: { id: order.id }, include: { items: true } });
-      if (!fresh) return;
-      if (fresh.status === "PAID") return;
+      const fresh = await tx.order.findUnique({
+        where: { id: order!.id },
+        include: { items: true },
+      });
 
-      if (!fresh.stockReservedAt) {
+      if (!fresh) return;
+
+      if (fresh.status !== "PAID" && !fresh.stockReservedAt) {
         for (const it of fresh.items) {
           const updated = await tx.variant.updateMany({
             where: { id: it.variantId, stock: { gte: it.qty } },
             data: { stock: { decrement: it.qty } },
           });
-          if (updated.count !== 1) throw new Error(`Estoque insuficiente (variantId=${it.variantId})`);
+
+          if (updated.count !== 1) {
+            throw new Error(`Estoque insuficiente no pagamento (variantId=${it.variantId})`);
+          }
         }
       }
 
@@ -62,16 +120,24 @@ export async function POST(req: Request) {
         data: {
           status: "PAID",
           paymentStatus: "APPROVED",
-          mpPaymentId: paymentId,
-          paidAt: new Date(),
+          paidAt: fresh.paidAt ?? new Date(),
           stockReservedAt: fresh.stockReservedAt ?? new Date(),
+          mpPaymentId: paymentId || fresh.mpPaymentId,
         },
       });
     });
 
-    return NextResponse.json({ ok: true, status: "approved" });
+    return NextResponse.json({
+      ok: true,
+      paid: true,
+      status: "approved",
+      orderPublicId: order.publicId,
+    });
   } catch (e: any) {
-    safeLogError("Checkout confirm falhou", { message: e?.message });
-    return NextResponse.json({ ok: true });
+    safeLogError("Falha ao confirmar checkout MP", { message: e?.message });
+    return NextResponse.json(
+      { error: "Falha ao confirmar pagamento" },
+      { status: 500 }
+    );
   }
 }

@@ -55,13 +55,17 @@ export async function fetchMercadoPagoPayment(paymentId: string) {
   if (!token) throw new Error("MERCADOPAGO_ACCESS_TOKEN ausente");
 
   const res = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-    headers: { Authorization: `Bearer ${token}` },
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
     cache: "no-store",
   });
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`MP payment fetch falhou (${res.status}): ${text.slice(0, 200)}`);
+    throw new Error(`MP payment fetch falhou (${res.status}): ${text.slice(0, 300)}`);
   }
 
   return res.json();
