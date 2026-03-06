@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/require-admin";
+import { getAdminSession } from "@/lib/auth";
 import { fetchMercadoPagoPayment } from "@/lib/mercadopago";
 
 type Ctx = { params: Promise<{ publicId: string }> };
 
 export async function POST(_req: Request, ctx: Ctx) {
-  await requireAdmin();
+  const session = await getAdminSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (session.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
   const { publicId } = await ctx.params;
 
   const order = await prisma.order.findUnique({
