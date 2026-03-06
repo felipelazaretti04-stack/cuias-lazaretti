@@ -168,10 +168,16 @@ export async function POST(req: Request) {
 
   // === CRIAR PREFERENCE MERCADO PAGO COM RATEIO ===
   try {
-    const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const base = rawAppUrl.trim().replace(/\/+$/, ""); // tira espaços e barra final
+    // Monta base URL a partir do request (à prova de env errado)
+    const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+    const proto = req.headers.get("x-forwarded-proto") ?? "https";
+    const baseFromReq = host ? `${proto}://${host}` : null;
+    const rawBase = baseFromReq || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const base = rawBase.trim().replace(/\/+$/, "");
+
     const backUrl = new URL("/checkout/retorno", base).toString();
     const notificationUrl = new URL("/api/webhooks/mercadopago", base).toString();
+
 
     // log temporário pra confirmar formato em produção (pode tirar depois)
     console.log("MP URLs", { backUrl, notificationUrl });

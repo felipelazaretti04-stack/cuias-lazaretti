@@ -5,7 +5,7 @@ import { fetchMercadoPagoPayment } from "@/lib/mercadopago";
 import { safeLogError } from "@/lib/idempotency";
 export async function POST(req: Request) {
   const url = new URL(req.url);
-  
+
   // ===== LOG DE DEBUG =====
   const body = await req.json().catch(() => ({} as any));
   console.log("MP WEBHOOK HIT", {
@@ -16,8 +16,9 @@ export async function POST(req: Request) {
     dataIdFromBody: body?.data?.id ?? body?.id,
   });
   // ========================
-  const typeQ = url.searchParams.get("type") || undefined;
-  const dataIdQ = url.searchParams.get("data.id") || undefined;
+  const typeQ = url.searchParams.get("type") || url.searchParams.get("topic") || undefined;
+  const dataIdQ = url.searchParams.get("data.id") || url.searchParams.get("id") || undefined;
+
   // REMOVIDO: const body = await req.json()... (já lemos acima)
   const type = typeQ || body?.type || body?.topic || "unknown";
   const paymentId = String(dataIdQ || body?.data?.id || body?.id || "").trim();
@@ -53,7 +54,9 @@ export async function POST(req: Request) {
 
   const status = String(payment?.status || "unknown").toLowerCase(); // approved, pending, rejected...
   const externalRef = String(payment?.external_reference || "").trim(); // nosso order.publicId
-  const prefId = String(payment?.order?.id || payment?.preference_id || "").trim();
+  const prefId = String(payment?.preference_id || "").trim();
+  const merchantOrderId = String(payment?.order?.id || "").trim(); // só pra log/debug
+
 
   // tenta achar order pelo external_reference (preferível) ou mpPreferenceId
   const order = externalRef
