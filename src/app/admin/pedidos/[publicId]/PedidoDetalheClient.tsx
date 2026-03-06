@@ -12,6 +12,7 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
   const [order, setOrder] = useState<Order | null>(null);
   const [status, setStatus] = useState("PENDING");
   const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   async function load() {
@@ -49,6 +50,46 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
     await load();
   }
 
+  async function syncPayment() {
+    setSyncing(true);
+    setErr(null);
+    try {
+      const res = await fetch(`/api/admin/orders/${publicId}/sync-payment`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErr(data?.error || "Falha ao sincronizar");
+      } else if (data.paid) {
+        alert("✅ Pagamento confirmado e estoque atualizado!");
+      } else {
+        alert(`Status do pagamento: ${data.status || "não aprovado"}`);
+      }
+      await load();
+    } catch (e: any) {
+      setErr(e?.message || "Erro ao sincronizar");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  function openWhatsApp() {
+    if (!order) return;
+    const phone = (order.customerPhone || "").replace(/\D/g, "");
+    if (!phone) {
+      alert("Cliente sem telefone cadastrado");
+      return;
+    }
+    const msg = encodeURIComponent(
+      `Olá, ${order.customerName || "cliente"}! ` +
+      `Seu pedido *${order.publicId}* na Cuias Lazaretti foi recebido ✅\n` +
+      `Status: ${orderStatusLabel(order.status)}\n` +
+      `Total: ${(order.totalCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}\n\n` +
+      `Qualquer dúvida, estamos à disposição!`
+    );
+    window.open(`https://wa.me/55${phone}?text=${msg}`, "_blank");
+  }
+
   if (!order) {
     return (
       <div className="container py-8">
@@ -60,6 +101,8 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
 
   const formatBRL = (cents: number) =>
     (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  const showSyncButton = order.status !== "PAID" && (order.mpPaymentId || order.mpPreferenceId);
 
   return (
     <div className="container py-8">
@@ -73,6 +116,25 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
               <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs">
                 Pagamento: {paymentStatusLabel(order.paymentStatus)}
               </span>
+            </div>
+
+            {/* Botões de ação */}
+            <div className="mt-4 flex flex-wrap gap-2">
+              {showSyncButton && (
+                <Button
+                  onClick={syncPayment}
+                  disabled={syncing}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {syncing ? "Sincronizando..." : "🔄 Sincronizar pagamento MP"}
+                </Button>
+              )}
+              <Button
+                onClick={openWhatsApp}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                💬 WhatsApp
+              </Button>
             </div>
           </div>
 
@@ -93,6 +155,7 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
           </div>
         </div>
 
+        {/* resto do componente continua igual... */}
         <div className="mt-6 grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-[hsl(var(--border))] bg-white p-4">
             <div className="text-sm font-semibold">Cliente</div>
