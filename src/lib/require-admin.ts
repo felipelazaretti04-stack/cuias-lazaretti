@@ -1,13 +1,17 @@
 // file: src/lib/require-admin.ts
-import { getAdminSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { getAdminSession } from "@/lib/auth";
 
 export async function requireAdmin() {
   const session = await getAdminSession();
-  
+
   if (!session) {
-    redirect("/login");
+    redirect("/admin/login");
   }
-  
+
+  if (session.role !== "ADMIN") {
+    redirect("/admin/login");
+  }
+
   return session;
 }
