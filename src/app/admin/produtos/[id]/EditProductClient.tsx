@@ -74,21 +74,18 @@ export default function EditProductClient({ productId }: { productId: string }) 
     setLoading(true);
     setErr(null);
     setOk(null);
-
     const res = await fetch(`/api/admin/produtos/${id}`, { method: "GET" });
-    setLoading(false);
+    const data = await res.json().catch(() => null);
 
+    setLoading(false);
     if (!res.ok) {
-      const data = await res.json().catch(() => null);
       setErr(data?.error || "Falha ao carregar produto");
       return;
     }
+    // ← REMOVIDO o setErr daqui!
 
-    const data = await res.json().catch(() => null);
-    setErr(data?.error || `Falha ao carregar pedido (${res.status})`);
     const p = data.product as any;
     const cats = (data.categories || []) as Category[];
-
     setCategories(cats);
 
     setName(p.name || "");
