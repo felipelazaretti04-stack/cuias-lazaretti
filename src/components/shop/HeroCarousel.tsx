@@ -53,8 +53,9 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
   const normalizedSlides = useMemo(() => {
     return slides.map((s) => {
       const raw = s.imageUrl || null;
-      const mobile = raw && isCloudinary(raw) ? cloudinaryHero(raw, 1400, 1750) : raw;
-      const desktop = raw && isCloudinary(raw) ? cloudinaryHero(raw, 2400, 1350) : raw;
+      const mobile = raw;
+      const desktop = raw;
+
 
       return { ...s, _imgMobile: mobile, _imgDesktop: desktop };
     });
@@ -79,7 +80,7 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
                             priority={i === 0}
                             quality={92}
                             sizes="100vw"
-                            className="object-cover"
+                            className="object-contain bg-black"
                           />
                         ) : null}
                       </div>
