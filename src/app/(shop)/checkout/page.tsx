@@ -390,8 +390,10 @@ export default function CheckoutPage() {
                         <div className="mt-1 text-xs text-[hsl(var(--muted))]">
                           {o.deliveryDays ? `Entrega estimada: ${o.deliveryDays} dias` : "Prazo será informado após envio"}
                         </div>
-                        {o.provider === "FALLBACK" && o.debugMessage && (
-                          <div className="mt-1 text-[11px] text-[hsl(var(--muted))]">{o.debugMessage}</div>
+                        {o.provider === "FALLBACK" && (
+                          <div className="mt-1 text-[11px] text-[hsl(var(--muted))]">
+                            Frete estimado para esta região. Confirmaremos o envio após a compra.
+                          </div>
                         )}
                       </div>
                     </div>

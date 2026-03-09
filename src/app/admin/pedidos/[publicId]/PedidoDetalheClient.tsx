@@ -88,41 +88,40 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
     setSuccessMsg("Status atualizado com sucesso.");
   }
 
- async function saveTracking() {
-  setSavingTracking(true);
-  setErr(null);
-  setSuccessMsg(null);
+  async function saveTracking() {
+    setSavingTracking(true);
+    setErr(null);
+    setSuccessMsg(null);
 
-  const cleanCode = trackingCode.trim().toUpperCase();
-  const cleanUrl = trackingUrl.trim();
+    const cleanCode = trackingCode.trim().toUpperCase();
+    const cleanUrl = trackingUrl.trim();
 
-  if (!cleanCode && !cleanUrl) {
+    if (!cleanCode && !cleanUrl) {
+      setSavingTracking(false);
+      setErr("Informe ao menos o código de rastreio ou um link.");
+      return;
+    }
+
+    const res = await fetch(`/api/admin/pedidos/${publicId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        trackingCode: cleanCode,
+        trackingUrl: cleanUrl,
+      }),
+    });
+
     setSavingTracking(false);
-    setErr("Informe ao menos o código de rastreio ou um link.");
-    return;
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      setErr(data?.error || "Falha ao salvar rastreio");
+      return;
+    }
+
+    await load();
+    setSuccessMsg("Rastreio salvo com sucesso.");
   }
-
-  const res = await fetch(`/api/admin/pedidos/${publicId}`, {
-    method: "PATCH",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      trackingCode: cleanCode,
-      trackingUrl: cleanUrl,
-    }),
-  });
-
-  setSavingTracking(false);
-
-  if (!res.ok) {
-    const data = await res.json().catch(() => null);
-    setErr(data?.error || "Falha ao salvar rastreio");
-    return;
-  }
-
-  await load();
-  setSuccessMsg("Rastreio salvo com sucesso.");
-}
-
 
   async function syncPayment() {
     setSyncing(true);
@@ -189,16 +188,16 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
     <div className="container py-8">
       <div className="card p-6">
         {/* Mensagens de feedback */}
-        {successMsg ? (
+        {successMsg && (
           <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
             ✅ {successMsg}
           </div>
-        ) : null}
-        {err ? (
+        )}
+        {err && (
           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
             ❌ {err}
           </div>
-        ) : null}
+        )}
 
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -213,7 +212,7 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2">
-              {showSyncButton ? (
+              {showSyncButton && (
                 <Button
                   onClick={syncPayment}
                   disabled={syncing}
@@ -221,7 +220,7 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
                 >
                   {syncing ? "Sincronizando..." : "🔄 Sincronizar pagamento MP"}
                 </Button>
-              ) : null}
+              )}
 
               <Button onClick={openWhatsApp} className="bg-green-600 hover:bg-green-700">
                 💬 WhatsApp
@@ -248,7 +247,7 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
         <div className="mt-6 grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-[hsl(var(--border))] bg-white p-4">
             <div className="text-sm font-semibold">Cliente</div>
-            <div className="mt-2 text-sm space-y-1">
+            <div className="mt-2 space-y-1 text-sm">
               <div>
                 <span className="text-[hsl(var(--muted))]">Nome:</span>{" "}
                 {order.customerName || order.customer?.name || "-"}
@@ -266,7 +265,7 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
 
           <div className="rounded-2xl border border-[hsl(var(--border))] bg-white p-4">
             <div className="text-sm font-semibold">Entrega</div>
-            <div className="mt-2 text-sm space-y-1">
+            <div className="mt-2 space-y-1 text-sm">
               <div>
                 <span className="text-[hsl(var(--muted))]">Método:</span> {order.shippingMethod || "-"}
               </div>
@@ -279,18 +278,18 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
               <div>
                 <span className="text-[hsl(var(--muted))]">Frete:</span> {formatBRL(order.shippingCostCents || 0)}
               </div>
-              {order.shippingDebugMessage ? (
+              {order.shippingDebugMessage && (
                 <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-2 text-xs text-yellow-900">
                   <b>Debug fallback:</b> {order.shippingDebugMessage}
                 </div>
-              ) : null}
+              )}
             </div>
           </div>
         </div>
 
         <div className="mt-4 rounded-2xl border border-[hsl(var(--border))] bg-white p-4">
           <div className="text-sm font-semibold">Endereço / retirada</div>
-          <div className="mt-3 grid gap-3 md:grid-cols-2 text-sm">
+          <div className="mt-3 grid gap-3 text-sm md:grid-cols-2">
             <div>
               <div className="text-xs text-[hsl(var(--muted))]">CEP</div>
               <div>{address.cep || "-"}</div>
@@ -330,7 +329,7 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
           <div className="text-sm font-semibold">Rastreio</div>
           <div className="mt-3 grid gap-4 md:grid-cols-2">
             <div>
-              <div className="text-xs text-[hsl(var(--muted))] mb-1">Código de rastreio</div>
+              <div className="mb-1 text-xs text-[hsl(var(--muted))]">Código de rastreio</div>
               <Input
                 value={trackingCode}
                 onChange={(e) => setTrackingCode(e.target.value)}
@@ -339,7 +338,7 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
             </div>
 
             <div>
-              <div className="text-xs text-[hsl(var(--muted))] mb-1">Link de rastreio (opcional)</div>
+              <div className="mb-1 text-xs text-[hsl(var(--muted))]">Link de rastreio (opcional)</div>
               <Input
                 value={trackingUrl}
                 onChange={(e) => setTrackingUrl(e.target.value)}
@@ -353,7 +352,7 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
               {savingTracking ? "Salvando..." : "Salvar rastreio"}
             </Button>
 
-            {order.trackingUrl ? (
+            {order.trackingUrl && (
               <a
                 href={order.trackingUrl}
                 target="_blank"
@@ -362,7 +361,7 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
               >
                 Abrir rastreio
               </a>
-            ) : null}
+            )}
           </div>
         </div>
 
@@ -431,9 +430,9 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
               </div>
             ))}
 
-            {(!order.paymentEvents || order.paymentEvents.length === 0) ? (
+            {(!order.paymentEvents || order.paymentEvents.length === 0) && (
               <div className="text-sm text-[hsl(var(--muted))]">Nenhum evento ainda.</div>
-            ) : null}
+            )}
           </div>
         </div>
       </div>

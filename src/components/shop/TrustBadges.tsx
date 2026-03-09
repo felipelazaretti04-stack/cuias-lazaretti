@@ -11,30 +11,21 @@ export function TrustBadges() {
 
   return (
     <section className="container py-4">
-      {/* Mobile: compacto COM borda */}
-      <div className="grid grid-cols-2 gap-2 md:hidden">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-3">
         {items.map((it) => (
           <div
             key={it.title}
-            className="flex items-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 shadow-sm"
+            className="rounded-xl border border-[hsl(var(--border))] bg-white p-3 shadow-sm md:rounded-2xl md:p-4"
           >
-            <it.icon size={16} className="shrink-0 text-[hsl(var(--primary))]" />
-            <span className="text-xs font-medium">{it.title}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Desktop: cards completos */}
-      <div className="hidden gap-3 md:grid md:grid-cols-4">
-        {items.map((it) => (
-          <div key={it.title} className="rounded-2xl border border-[hsl(var(--border))] bg-white p-4 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="rounded-xl bg-[hsl(var(--accent))] p-2 text-[hsl(var(--primary))]">
-                <it.icon size={18} />
+            <div className="flex items-start gap-2 md:gap-3">
+              <div className="rounded-lg bg-[hsl(var(--accent))] p-1.5 text-[hsl(var(--primary))] md:rounded-xl md:p-2">
+                <it.icon size={16} className="md:h-[18px] md:w-[18px]" />
               </div>
               <div>
-                <div className="text-sm font-semibold">{it.title}</div>
-                <div className="mt-1 text-xs text-[hsl(var(--muted))]">{it.desc}</div>
+                <div className="text-xs font-semibold md:text-sm">{it.title}</div>
+                <div className="mt-0.5 text-[10px] leading-tight text-[hsl(var(--muted))] md:mt-1 md:text-xs">
+                  {it.desc}
+                </div>
               </div>
             </div>
           </div>
