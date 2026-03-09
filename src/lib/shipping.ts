@@ -127,7 +127,7 @@ export async function quotePACWithMelhorEnvio(cep: string, weightKg = 0.6) {
   });
 
   if (!pac) {
-    throw new Error("PAC indisponível ou sem preço válido para este CEP");
+    throw new Error("Frete estimado para esta região. Confirmaremos o envio após a compra.");
   }
 
   const price = Number(

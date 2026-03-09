@@ -51,18 +51,28 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ publicId: str
   const { publicId } = await ctx.params;
   const data = parsed.data;
 
+  const trackingCode =
+    data.trackingCode !== undefined ? String(data.trackingCode || "").trim().toUpperCase() : undefined;
+
+  const trackingUrl =
+    data.trackingUrl !== undefined ? String(data.trackingUrl || "").trim() : undefined;
+
+  const autoTrackingUrl =
+    trackingCode && !trackingUrl
+      ? `https://rastreamento.correios.com.br/app/index.php?objeto=${encodeURIComponent(trackingCode)}`
+      : trackingUrl;
+
   const order = await prisma.order.update({
     where: { publicId },
     data: {
       ...(data.status ? { status: data.status } : {}),
-      ...(data.trackingCode !== undefined
-        ? { trackingCode: data.trackingCode || null }
-        : {}),
-      ...(data.trackingUrl !== undefined
-        ? { trackingUrl: data.trackingUrl || null }
+      ...(trackingCode !== undefined ? { trackingCode: trackingCode || null } : {}),
+      ...(trackingUrl !== undefined || trackingCode !== undefined
+        ? { trackingUrl: autoTrackingUrl || null }
         : {}),
     },
   });
 
   return NextResponse.json({ order });
 }
+

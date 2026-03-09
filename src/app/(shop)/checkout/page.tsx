@@ -60,6 +60,9 @@ export default function CheckoutPage() {
 
   const [note, setNote] = useState("");
 
+  // Controle do autofill por CEP
+  const [lastAutofillCep, setLastAutofillCep] = useState("");
+
   const [couponCode, setCouponCode] = useState("");
   const [couponApplied, setCouponApplied] = useState<{ code: string; type: string; value: number } | null>(null);
   const [couponErr, setCouponErr] = useState<string | null>(null);
@@ -141,12 +144,18 @@ export default function CheckoutPage() {
         setSelectedIdx(0);
       }
 
+      // Autofill apenas se CEP mudou
       if (cepRes.ok && cepData) {
-        setAddressLine((prev) => prev || cepData.addressLine || "");
-        setDistrict((prev) => prev || cepData.district || "");
-        setCity((prev) => prev || cepData.city || "");
-        setUf((prev) => prev || cepData.uf || "");
-        setComplement((prev) => prev || cepData.complement || "");
+        const normalizedCep = onlyDigits(cepDigits);
+
+        if (lastAutofillCep !== normalizedCep) {
+          setAddressLine(cepData.addressLine || "");
+          setDistrict(cepData.district || "");
+          setCity(cepData.city || "");
+          setUf(cepData.uf || "");
+          setComplement(cepData.complement || "");
+          setLastAutofillCep(normalizedCep);
+        }
       }
     } finally {
       setLoadingQuote(false);
@@ -237,19 +246,19 @@ export default function CheckoutPage() {
         cep: showPAC ? onlyDigits(cep) : undefined,
         address: showPAC
           ? {
-              addressLine,
-              number,
-              district,
-              city,
-              uf,
-              complement,
-              cep: onlyDigits(cep),
-            }
+            addressLine,
+            number,
+            district,
+            city,
+            uf,
+            complement,
+            cep: onlyDigits(cep),
+          }
           : {
-              city,
-              uf,
-              note,
-            },
+            city,
+            uf,
+            note,
+          },
         option: selected,
       },
     };
@@ -350,7 +359,13 @@ export default function CheckoutPage() {
                 <div className="flex gap-2">
                   <Input
                     value={cep}
-                    onChange={(e) => setCep(e.target.value)}
+                    onChange={(e) => {
+                      const digits = onlyDigits(e.target.value).slice(0, 8);
+                      const masked =
+                        digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits;
+                      setCep(masked);
+                      setLastAutofillCep(""); // Reseta ao digitar novo CEP
+                    }}
                     placeholder="00000-000"
                   />
                   <Button type="button" variant="secondary" onClick={quote} disabled={loadingQuote}>
