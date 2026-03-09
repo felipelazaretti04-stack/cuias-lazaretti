@@ -11,17 +11,20 @@ export function TrustBadges() {
 
   return (
     <section className="container py-4">
-      {/* Mobile: linha compacta */}
-      <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-[hsl(var(--muted))] md:hidden">
+      {/* Mobile: compacto COM borda */}
+      <div className="grid grid-cols-2 gap-2 md:hidden">
         {items.map((it) => (
-          <div key={it.title} className="flex items-center gap-1.5">
-            <it.icon size={16} className="text-[hsl(var(--primary))]" />
-            <span>{it.title}</span>
+          <div
+            key={it.title}
+            className="flex items-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 shadow-sm"
+          >
+            <it.icon size={16} className="shrink-0 text-[hsl(var(--primary))]" />
+            <span className="text-xs font-medium">{it.title}</span>
           </div>
         ))}
       </div>
 
-      {/* Desktop: cards com borda */}
+      {/* Desktop: cards completos */}
       <div className="hidden gap-3 md:grid md:grid-cols-4">
         {items.map((it) => (
           <div key={it.title} className="rounded-2xl border border-[hsl(var(--border))] bg-white p-4 shadow-sm">

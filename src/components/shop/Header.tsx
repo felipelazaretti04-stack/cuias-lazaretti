@@ -29,7 +29,6 @@ export async function Header() {
               >
                 <Phone size={12} />
                 <span className="font-medium">WhatsApp</span>
-                <span className="hidden sm:inline">: {whatsappRaw}</span>
               </a>
             )}
 
