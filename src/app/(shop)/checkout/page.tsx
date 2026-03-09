@@ -82,6 +82,12 @@ export default function CheckoutPage() {
   }, []);
 
   async function quote() {
+    // Não cota PAC sem CEP válido
+    if (method === "PAC" && cep.replace(/\D/g, "").length !== 8) {
+      setOptions([]);
+      return;
+    }
+
     setErr(null);
     setLoadingQuote(true);
     const res = await fetch("/api/checkout/quote-shipping", {
@@ -101,10 +107,18 @@ export default function CheckoutPage() {
     setSelectedIdx(0);
   }
 
+
   useEffect(() => {
-    quote();
+    // PICKUP: cota direto | PAC: só cota se CEP tiver 8 dígitos
+    if (method === "PICKUP" || cep.replace(/\D/g, "").length === 8) {
+      quote();
+    } else {
+      // Limpa opções quando muda pra PAC sem CEP
+      setOptions([]);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [method]);
+
 
   const showPAC = method === "PAC";
 
