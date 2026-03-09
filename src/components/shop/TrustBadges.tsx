@@ -10,7 +10,7 @@ export function TrustBadges() {
   ];
 
   return (
-    <section className="container py-4">
+    <section className="container pt-4 pb-1">
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-3">
         {items.map((it) => (
           <div

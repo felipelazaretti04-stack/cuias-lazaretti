@@ -17,7 +17,7 @@ export default async function HomePage() {
       <HeroCarousel slides={slides} />
       <TrustBadges />
 
-      {rails.map(({ rail, products }) => {
+      {rails.map(({ rail, products }, index) => {
         const ui = products
           .map((p: any) => {
             const v = p.variants?.[0];
@@ -47,7 +47,7 @@ export default async function HomePage() {
         const tone = rail.sortOrder % 2 === 0 ? "accent" : "light";
 
         return (
-          <SectionShell key={rail.id} tone={tone as any}>
+          <SectionShell key={rail.id} tone={tone as any} first={index === 0}>
             <ProductRail
               title={rail.title}
               subtitle={rail.subtitle || ""}
