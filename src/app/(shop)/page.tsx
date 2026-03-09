@@ -75,8 +75,9 @@ export default async function HomePage() {
                   src={content.institutionalImageUrl}
                   alt="Institucional"
                   fill
+                  quality={90}
                   className="object-cover"
-                  sizes="50vw"
+                  sizes="(max-width: 768px) 100vw, 50vw"
                 />
               ) : (
                 <div className="absolute inset-0 bg-gradient-to-tr from-[hsl(var(--gold))]/12 via-transparent to-[hsl(var(--primary))]/10" />

@@ -23,16 +23,9 @@ function isCloudinary(url?: string | null) {
   return url.includes("res.cloudinary.com") && url.includes("/upload/");
 }
 
-/**
- * Normaliza imagens do Cloudinary para ficar SEMPRE bonito no hero:
- * - crop fill (sem distorcer)
- * - gravity auto (tenta preservar o assunto)
- * - formato/qualidade automáticos
- * - tamanho consistente (evita “corte feio” e melhora performance)
- */
 function cloudinaryHero(url: string, w: number, h: number) {
-  // injeta transformação depois de /upload/
-  const t = `c_fill,g_auto,w_${w},h_${h},q_auto,f_auto`;
+  // remove q_auto para evitar compressão agressiva no hero
+  const t = `c_fill,g_auto,w_${w},h_${h},f_auto`;
   return url.replace("/upload/", `/upload/${t}/`);
 }
 
@@ -51,7 +44,6 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
     emblaApi.on("select", onSelect);
   }, [emblaApi, onSelect]);
 
-  // autoplay simples
   useEffect(() => {
     if (!emblaApi) return;
     const t = setInterval(() => emblaApi.scrollNext(), 6000);
@@ -61,12 +53,8 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
   const normalizedSlides = useMemo(() => {
     return slides.map((s) => {
       const raw = s.imageUrl || null;
-
-      // tamanhos alvo do hero (ajuste fino)
-      // mobile: 1080x1350 (4:5) — bonito e “commerce-like”
-      // desktop: 1920x1080 (16:9)
-      const mobile = raw && isCloudinary(raw) ? cloudinaryHero(raw, 1080, 1350) : raw;
-      const desktop = raw && isCloudinary(raw) ? cloudinaryHero(raw, 1920, 1080) : raw;
+      const mobile = raw && isCloudinary(raw) ? cloudinaryHero(raw, 1400, 1750) : raw;
+      const desktop = raw && isCloudinary(raw) ? cloudinaryHero(raw, 2400, 1350) : raw;
 
       return { ...s, _imgMobile: mobile, _imgDesktop: desktop };
     });
@@ -80,11 +68,6 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
             {normalizedSlides.map((s, i) => (
               <div key={i} className="min-w-0 flex-[0_0_100%]">
                 <div className="relative">
-                  {/* HERO MEDIA:
-                      - mobile: aspect 4/5
-                      - desktop+: aspect 16/9
-                      - sempre usando next/image (melhor LCP/CLS)
-                  */}
                   <div className="relative w-full bg-[hsl(var(--accent))]">
                     <div className="md:hidden">
                       <div className="relative aspect-[4/5] w-full">
@@ -94,6 +77,7 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
                             alt={s.title}
                             fill
                             priority={i === 0}
+                            quality={92}
                             sizes="100vw"
                             className="object-cover"
                           />
@@ -109,14 +93,14 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
                             alt={s.title}
                             fill
                             priority={i === 0}
-                            sizes="(min-width: 1024px) 100vw, 100vw"
+                            quality={92}
+                            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 92vw, 1200px"
                             className="object-cover"
                           />
                         ) : null}
                       </div>
                     </div>
 
-                    {/* overlay */}
                     <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/25 to-transparent" />
                   </div>
 
@@ -156,7 +140,6 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
                     </div>
                   </div>
 
-                  {/* dots */}
                   <div className="absolute bottom-5 left-1/2 -translate-x-1/2">
                     <div className="flex gap-2 rounded-full border border-white/15 bg-black/20 px-3 py-1.5 backdrop-blur">
                       {normalizedSlides.map((_, di) => (
