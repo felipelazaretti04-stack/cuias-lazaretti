@@ -104,12 +104,18 @@ model Order {
   customerId           String?
   couponCode           String?
   discountCents        Int            @default(0)
+  
+  // NOVOS CAMPOS - Rastreamento
+  trackingCode         String?
+  trackingUrl          String?
+  
   customer             Customer?      @relation(fields: [customerId], references: [id])
   items                OrderItem[]
   paymentEvents        PaymentEvent[]
 
   @@index([customerId])
 }
+
 
 model OrderItem {
   id             String  @id @default(cuid())

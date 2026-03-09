@@ -1,3 +1,4 @@
+// file: src/app/api/admin/pedidos/[publicId]/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminSession } from "@/lib/auth";
@@ -9,6 +10,7 @@ export async function GET(_: Request, ctx: { params: Promise<{ publicId: string 
   if (session.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { publicId } = await ctx.params;
+
   const order = await prisma.order.findUnique({
     where: { publicId },
     include: {
@@ -20,10 +22,16 @@ export async function GET(_: Request, ctx: { params: Promise<{ publicId: string 
           },
         },
       },
-      paymentEvents: { orderBy: { receivedAt: "desc" }, take: 20 },
+      paymentEvents: {
+        orderBy: { receivedAt: "desc" },
+        take: 20,
+      },
     },
   });
-  if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  if (!order) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
 
   return NextResponse.json({ order });
 }
@@ -35,13 +43,25 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ publicId: str
 
   const body = await req.json().catch(() => null);
   const parsed = adminUpdateOrderSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Dados inválidos" }, { status: 400 });
+
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Dados inválidos" }, { status: 400 });
+  }
 
   const { publicId } = await ctx.params;
+  const data = parsed.data;
 
   const order = await prisma.order.update({
     where: { publicId },
-    data: { status: parsed.data.status },
+    data: {
+      ...(data.status ? { status: data.status } : {}),
+      ...(data.trackingCode !== undefined
+        ? { trackingCode: data.trackingCode || null }
+        : {}),
+      ...(data.trackingUrl !== undefined
+        ? { trackingUrl: data.trackingUrl || null }
+        : {}),
+    },
   });
 
   return NextResponse.json({ order });
