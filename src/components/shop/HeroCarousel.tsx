@@ -18,17 +18,6 @@ type Slide = {
   secondaryHref: string;
 };
 
-function isCloudinary(url?: string | null) {
-  if (!url) return false;
-  return url.includes("res.cloudinary.com") && url.includes("/upload/");
-}
-
-function cloudinaryHero(url: string, w: number, h: number) {
-  // remove q_auto para evitar compressão agressiva no hero
-  const t = `c_fill,g_auto,w_${w},h_${h},f_auto`;
-  return url.replace("/upload/", `/upload/${t}/`);
-}
-
 export function HeroCarousel({ slides }: { slides: Slide[] }) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
   const [index, setIndex] = useState(0);
@@ -50,56 +39,28 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
     return () => clearInterval(t);
   }, [emblaApi]);
 
-  const normalizedSlides = useMemo(() => {
-    return slides.map((s) => {
-      const raw = s.imageUrl || null;
-      const mobile = raw;
-      const desktop = raw;
-
-
-      return { ...s, _imgMobile: mobile, _imgDesktop: desktop };
-    });
-  }, [slides]);
-
   return (
-    <section className="container py-6 md:py-10 overflow-hidden">
+    <section className="container overflow-hidden py-6 md:py-10">
       <div className="card overflow-hidden shadow-soft">
         <div ref={emblaRef} className="overflow-hidden">
           <div className="flex">
-            {normalizedSlides.map((s, i) => (
+            {slides.map((s, i) => (
               <div key={i} className="min-w-0 flex-[0_0_100%]">
                 <div className="relative">
                   <div className="relative w-full bg-[hsl(var(--accent))]">
-                    <div className="md:hidden">
-                      <div className="relative aspect-[4/5] w-full">
-                        {s._imgMobile ? (
-                          <Image
-                            src={s._imgMobile}
-                            alt={s.title}
-                            fill
-                            priority={i === 0}
-                            quality={92}
-                            sizes="100vw"
-                            className="object-cover"
-                          />
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <div className="hidden md:block">
-                      <div className="relative aspect-[16/9] w-full">
-                        {s._imgDesktop ? (
-                          <Image
-                            src={s._imgDesktop}
-                            alt={s.title}
-                            fill
-                            priority={i === 0}
-                            quality={92}
-                            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 92vw, 1200px"
-                            className="object-cover"
-                          />
-                        ) : null}
-                      </div>
+                    {/* Imagem única responsiva */}
+                    <div className="relative aspect-[4/5] w-full md:aspect-[16/9]">
+                      {s.imageUrl && (
+                        <Image
+                          src={s.imageUrl}
+                          alt={s.title}
+                          fill
+                          priority={i === 0}
+                          quality={90}
+                          sizes="(max-width: 768px) 100vw, 1200px"
+                          className="object-cover"
+                        />
+                      )}
                     </div>
 
                     <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/25 to-transparent" />
@@ -112,9 +73,9 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
 
                         <h1 className="mt-4 text-3xl font-semibold tracking-tight md:text-5xl">
                           {s.title}{" "}
-                          {s.highlight ? (
+                          {s.highlight && (
                             <span className="font-script text-[hsl(var(--gold))]">{s.highlight}</span>
-                          ) : null}
+                          )}
                         </h1>
 
                         <p className="mt-3 text-sm text-white/85 md:text-base">{s.subtitle}</p>
@@ -143,7 +104,7 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
 
                   <div className="absolute bottom-5 left-1/2 -translate-x-1/2">
                     <div className="flex gap-2 rounded-full border border-white/15 bg-black/20 px-3 py-1.5 backdrop-blur">
-                      {normalizedSlides.map((_, di) => (
+                      {slides.map((_, di) => (
                         <button
                           key={di}
                           aria-label={`Slide ${di + 1}`}
