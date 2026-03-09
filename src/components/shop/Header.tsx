@@ -13,13 +13,14 @@ export async function Header() {
   const whatsappRaw = process.env.NEXT_PUBLIC_STORE_WHATSAPP || "";
   const whatsappDigits = whatsappRaw.replace(/\D/g, "");
   const address = process.env.NEXT_PUBLIC_STORE_ADDRESS || "Erechim/RS";
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 
   return (
     <header className="sticky top-0 z-50 border-b border-[hsl(var(--border))] bg-white/90 backdrop-blur">
       <div className="border-b border-[hsl(var(--border))] bg-[hsl(var(--bg))]">
         <div className="container flex min-h-10 items-center justify-between gap-3 py-2 text-xs">
           <div className="flex min-w-0 flex-wrap items-center gap-3 text-[hsl(var(--muted))]">
-            {whatsappDigits ? (
+            {whatsappDigits && (
               <a
                 href={`https://wa.me/55${whatsappDigits}`}
                 target="_blank"
@@ -27,18 +28,24 @@ export async function Header() {
                 className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-green-700 transition hover:bg-green-100"
               >
                 <Phone size={12} />
-                <span className="font-medium">WhatsApp:</span>
-                <span>{whatsappRaw}</span>
+                <span className="font-medium">WhatsApp</span>
+                <span className="hidden sm:inline">: {whatsappRaw}</span>
               </a>
-            ) : null}
+            )}
 
-            <div className="hidden items-center gap-1.5 sm:inline-flex">
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 transition hover:text-[hsl(var(--fg))]"
+            >
               <MapPin size={12} />
-              <span>{address}</span>
-            </div>
+              <span className="hidden sm:inline">{address}</span>
+              <span className="sm:hidden">Endereço</span>
+            </a>
           </div>
 
-          <div className="hidden md:block text-[hsl(var(--muted))]">
+          <div className="hidden text-[hsl(var(--muted))] md:block">
             Retirada em Erechim/RS • Envio para todo o Brasil
           </div>
         </div>
@@ -88,11 +95,11 @@ export async function Header() {
           >
             <ShoppingBag size={16} />
             <span className="hidden sm:inline">Carrinho</span>
-            {count > 0 ? (
+            {count > 0 && (
               <span className="absolute -right-2 -top-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[hsl(var(--gold))] px-1 text-[11px] font-bold text-[hsl(var(--leather))]">
                 {count}
               </span>
-            ) : null}
+            )}
           </Link>
         </div>
       </div>
