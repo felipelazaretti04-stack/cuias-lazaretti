@@ -132,6 +132,14 @@ export default async function PedidoPage({
       ) : null}
 
       <div className="mx-auto max-w-4xl space-y-6">
+        {/* Card de acompanhamento */}
+        <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--bg))] p-4">
+          <div className="text-sm font-semibold">📌 Acompanhamento do pedido</div>
+          <p className="mt-1 text-sm text-[hsl(var(--muted))]">
+            Salve este link para consultar pagamento, envio e rastreio sempre que quiser.
+          </p>
+        </div>
+
         <div className="rounded-3xl border border-[hsl(var(--border))] bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -243,7 +251,7 @@ export default async function PedidoPage({
               </div>
             </div>
 
-            {/* NOVO - Card de Rastreio */}
+            {/* Card de Rastreio */}
             {order.trackingCode || order.trackingUrl ? (
               <div className="rounded-3xl border border-[hsl(var(--border))] bg-white p-6 shadow-sm">
                 <div className="text-lg font-semibold">Rastreio</div>
@@ -270,67 +278,61 @@ export default async function PedidoPage({
               </div>
             ) : null}
 
-            {/* Resto continua igual... */}
             <div className="rounded-3xl border border-[hsl(var(--border))] bg-white p-6 shadow-sm">
               <div className="text-lg font-semibold">Cliente e entrega</div>
-              {/* ... */}
-            </div>
-          </div>
 
-          <div className="rounded-3xl border border-[hsl(var(--border))] bg-white p-6 shadow-sm">
-            <div className="text-lg font-semibold">Cliente e entrega</div>
+              <div className="mt-4 space-y-3 text-sm">
+                <div>
+                  <div className="text-xs text-[hsl(var(--muted))]">Cliente</div>
+                  <div className="font-medium">{order.customerName || "Não informado"}</div>
+                </div>
 
-            <div className="mt-4 space-y-3 text-sm">
-              <div>
-                <div className="text-xs text-[hsl(var(--muted))]">Cliente</div>
-                <div className="font-medium">{order.customerName || "Não informado"}</div>
-              </div>
+                <div>
+                  <div className="text-xs text-[hsl(var(--muted))]">E-mail</div>
+                  <div className="font-medium">{order.customerEmail || "Não informado"}</div>
+                </div>
 
-              <div>
-                <div className="text-xs text-[hsl(var(--muted))]">E-mail</div>
-                <div className="font-medium">{order.customerEmail || "Não informado"}</div>
-              </div>
+                <div>
+                  <div className="text-xs text-[hsl(var(--muted))]">WhatsApp</div>
+                  <div className="font-medium">{order.customerPhone || "Não informado"}</div>
+                </div>
 
-              <div>
-                <div className="text-xs text-[hsl(var(--muted))]">WhatsApp</div>
-                <div className="font-medium">{order.customerPhone || "Não informado"}</div>
-              </div>
+                <div>
+                  <div className="text-xs text-[hsl(var(--muted))]">Método de entrega</div>
+                  <div className="font-medium">{order.shippingMethod || "Não informado"}</div>
+                </div>
 
-              <div>
-                <div className="text-xs text-[hsl(var(--muted))]">Método de entrega</div>
-                <div className="font-medium">{order.shippingMethod || "Não informado"}</div>
-              </div>
-
-              <div>
-                <div className="text-xs text-[hsl(var(--muted))]">Transportadora / serviço</div>
-                <div className="font-medium">
-                  {order.shippingServiceName || order.shippingProvider || "Não informado"}
+                <div>
+                  <div className="text-xs text-[hsl(var(--muted))]">Transportadora / serviço</div>
+                  <div className="font-medium">
+                    {order.shippingServiceName || order.shippingProvider || "Não informado"}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="rounded-3xl border border-[hsl(var(--border))] bg-white p-6 shadow-sm">
-            <div className="text-lg font-semibold">Precisa de ajuda?</div>
-            <p className="mt-2 text-sm text-[hsl(var(--muted))]">
-              Se tiver qualquer dúvida sobre seu pedido, fale com a nossa equipe.
-            </p>
+            <div className="rounded-3xl border border-[hsl(var(--border))] bg-white p-6 shadow-sm">
+              <div className="text-lg font-semibold">Precisa de ajuda?</div>
+              <p className="mt-2 text-sm text-[hsl(var(--muted))]">
+                Se tiver qualquer dúvida sobre seu pedido, fale com a nossa equipe.
+              </p>
 
-            <div className="mt-4 flex flex-wrap gap-3">
-              <Link
-                href={whatsappHref}
-                target="_blank"
-                className="rounded-xl bg-green-600 px-4 py-2 text-sm font-medium text-white"
-              >
-                Falar no WhatsApp
-              </Link>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Link
+                  href={whatsappHref}
+                  target="_blank"
+                  className="rounded-xl bg-green-600 px-4 py-2 text-sm font-medium text-white"
+                >
+                  Falar no WhatsApp
+                </Link>
 
-              <Link
-                href="/produtos"
-                className="rounded-xl border border-[hsl(var(--border))] bg-white px-4 py-2 text-sm"
-              >
-                Continuar comprando
-              </Link>
+                <Link
+                  href="/produtos"
+                  className="rounded-xl border border-[hsl(var(--border))] bg-white px-4 py-2 text-sm"
+                >
+                  Continuar comprando
+                </Link>
+              </div>
             </div>
           </div>
         </div>

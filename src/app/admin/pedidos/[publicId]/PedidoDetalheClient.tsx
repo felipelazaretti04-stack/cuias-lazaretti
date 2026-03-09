@@ -40,9 +40,11 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
   const [syncing, setSyncing] = useState(false);
   const [savingTracking, setSavingTracking] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   async function load() {
     setErr(null);
+    setSuccessMsg(null);
 
     const res = await fetch(`/api/admin/pedidos/${publicId}`);
     if (!res.ok) {
@@ -66,6 +68,7 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
   async function updateStatus() {
     setLoading(true);
     setErr(null);
+    setSuccessMsg(null);
 
     const res = await fetch(`/api/admin/pedidos/${publicId}`, {
       method: "PATCH",
@@ -82,36 +85,49 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
     }
 
     await load();
+    setSuccessMsg("Status atualizado com sucesso.");
   }
 
-  async function saveTracking() {
-    setSavingTracking(true);
-    setErr(null);
+ async function saveTracking() {
+  setSavingTracking(true);
+  setErr(null);
+  setSuccessMsg(null);
 
-    const res = await fetch(`/api/admin/pedidos/${publicId}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        trackingCode,
-        trackingUrl,
-      }),
-    });
+  const cleanCode = trackingCode.trim().toUpperCase();
+  const cleanUrl = trackingUrl.trim();
 
+  if (!cleanCode && !cleanUrl) {
     setSavingTracking(false);
-
-    if (!res.ok) {
-      const data = await res.json().catch(() => null);
-      setErr(data?.error || "Falha ao salvar rastreio");
-      return;
-    }
-
-    await load();
-    alert("✅ Rastreio salvo com sucesso");
+    setErr("Informe ao menos o código de rastreio ou um link.");
+    return;
   }
+
+  const res = await fetch(`/api/admin/pedidos/${publicId}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      trackingCode: cleanCode,
+      trackingUrl: cleanUrl,
+    }),
+  });
+
+  setSavingTracking(false);
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    setErr(data?.error || "Falha ao salvar rastreio");
+    return;
+  }
+
+  await load();
+  setSuccessMsg("Rastreio salvo com sucesso.");
+}
+
 
   async function syncPayment() {
     setSyncing(true);
     setErr(null);
+    setSuccessMsg(null);
 
     try {
       const res = await fetch(`/api/admin/orders/${publicId}/sync-payment`, {
@@ -123,9 +139,9 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
       if (!res.ok) {
         setErr(data?.error || "Falha ao sincronizar");
       } else if (data.paid) {
-        alert("✅ Pagamento confirmado e estoque atualizado!");
+        setSuccessMsg("Pagamento confirmado e estoque atualizado!");
       } else {
-        alert(`Status do pagamento: ${data.status || "não aprovado"}`);
+        setSuccessMsg(`Status do pagamento: ${data.status || "não aprovado"}`);
       }
 
       await load();
@@ -141,7 +157,7 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
 
     const phone = (order.customerPhone || "").replace(/\D/g, "");
     if (!phone) {
-      alert("Cliente sem telefone cadastrado");
+      setErr("Cliente sem telefone cadastrado");
       return;
     }
 
@@ -172,6 +188,18 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
   return (
     <div className="container py-8">
       <div className="card p-6">
+        {/* Mensagens de feedback */}
+        {successMsg ? (
+          <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+            ✅ {successMsg}
+          </div>
+        ) : null}
+        {err ? (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+            ❌ {err}
+          </div>
+        ) : null}
+
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="text-xs text-[hsl(var(--muted))]">Pedido</div>
@@ -214,7 +242,6 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
                 {loading ? "..." : "Salvar"}
               </Button>
             </div>
-            {err ? <div className="mt-2 text-xs text-red-700">{err}</div> : null}
           </div>
         </div>
 
@@ -312,11 +339,11 @@ export default function PedidoDetalheClient({ publicId }: { publicId: string }) 
             </div>
 
             <div>
-              <div className="text-xs text-[hsl(var(--muted))] mb-1">Link de rastreio</div>
+              <div className="text-xs text-[hsl(var(--muted))] mb-1">Link de rastreio (opcional)</div>
               <Input
                 value={trackingUrl}
                 onChange={(e) => setTrackingUrl(e.target.value)}
-                placeholder="https://..."
+                placeholder="Deixe vazio para gerar automaticamente"
               />
             </div>
           </div>

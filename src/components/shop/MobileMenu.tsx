@@ -1,3 +1,4 @@
+// file: src/components/shop/MobileMenu.tsx
 "use client";
 
 import Link from "next/link";
@@ -11,7 +12,6 @@ export function MobileMenu() {
 
   useEffect(() => setOpen(false), [pathname]);
 
-  // Trava scroll do body quando menu aberto
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
@@ -30,13 +30,11 @@ export function MobileMenu() {
 
       {open && (
         <>
-          {/* Backdrop */}
-          <div 
+          <div
             className="fixed inset-0 top-[64px] z-40 bg-black/30"
             onClick={() => setOpen(false)}
           />
-          
-          {/* Menu */}
+
           <div className="fixed left-0 right-0 top-[64px] z-50 border-b border-[hsl(var(--border))] bg-white shadow-lg">
             <div className="px-4 py-4">
               <nav className="grid gap-3 text-sm">
@@ -45,6 +43,9 @@ export function MobileMenu() {
                 </Link>
                 <Link href="/produtos?featured=1" className="py-2 hover:text-[hsl(var(--primary))]">
                   Destaques
+                </Link>
+                <Link href="/meus-pedidos" className="py-2 hover:text-[hsl(var(--primary))]">
+                  Meus pedidos
                 </Link>
                 <Link href="/sobre" className="py-2 hover:text-[hsl(var(--primary))]">
                   Sobre

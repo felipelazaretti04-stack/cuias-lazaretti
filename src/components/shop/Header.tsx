@@ -2,7 +2,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { getCart } from "@/lib/cart";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, Phone, MapPin } from "lucide-react";
 import { SearchBar } from "@/components/shop/SearchBar";
 import { MobileMenu } from "@/components/shop/MobileMenu";
 
@@ -10,8 +10,35 @@ export async function Header() {
   const cart = await getCart();
   const count = cart.items.reduce((acc, it) => acc + it.qty, 0);
 
+  const whatsapp = process.env.NEXT_PUBLIC_STORE_WHATSAPP || "";
+  const address = process.env.NEXT_PUBLIC_STORE_ADDRESS || "Erechim/RS";
+
   return (
     <header className="sticky top-0 z-50 border-b border-[hsl(var(--border))] bg-white/75 backdrop-blur">
+      {/* Faixa de contato */}
+      <div className="border-b border-[hsl(var(--border))] bg-[hsl(var(--bg))]">
+        <div className="container flex flex-wrap items-center justify-between gap-2 py-1.5 text-xs text-[hsl(var(--muted))]">
+          <div className="flex items-center gap-4">
+            {whatsapp && (
+              <a
+                href={`https://wa.me/55${whatsapp.replace(/\D/g, "")}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1 hover:text-[hsl(var(--fg))]"
+              >
+                <Phone size={12} />
+                <span>{whatsapp}</span>
+              </a>
+            )}
+            <span className="hidden items-center gap-1 sm:flex">
+              <MapPin size={12} />
+              <span>{address}</span>
+            </span>
+          </div>
+          <span className="hidden md:block">Envio para todo o Brasil</span>
+        </div>
+      </div>
+
       <div className="container relative grid grid-cols-2 items-center gap-3 py-3 md:grid-cols-3">
         <Link href="/" className="flex items-center gap-3">
           <div className="relative h-10 w-12 overflow-hidden rounded-2xl border border-[hsl(var(--border))] bg-white">
@@ -58,6 +85,7 @@ export async function Header() {
             <Link href="/produtos?cat=cuias" className="hover:opacity-80">Cuias</Link>
             <Link href="/produtos?cat=bombas" className="hover:opacity-80">Bombas</Link>
             <Link href="/produtos?cat=acessorios" className="hover:opacity-80">Acessórios</Link>
+            <Link href="/meus-pedidos" className="hover:opacity-80">Meus pedidos</Link>
           </div>
           <div className="hidden text-xs text-[hsl(var(--muted))] md:block">
             Pagamento seguro • Checkout Mercado Pago

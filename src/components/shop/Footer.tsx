@@ -1,3 +1,4 @@
+// file: src/components/shop/Footer.tsx
 import Link from "next/link";
 
 export function Footer() {
@@ -14,6 +15,7 @@ export function Footer() {
 
           <div className="grid gap-2 text-sm">
             <Link href="/produtos">Produtos</Link>
+            <Link href="/meus-pedidos">Meus pedidos</Link>
             <Link href="/sobre">Sobre</Link>
             <Link href="/contato">Contato</Link>
             <Link href="/privacidade">Privacidade</Link>
@@ -31,7 +33,6 @@ export function Footer() {
             © {new Date().getFullYear()} Cuias Lazaretti
           </div>
 
-          {/* “Escondido”/discreto */}
           <Link href="/admin" className="text-xs text-[hsl(var(--muted))] hover:text-[hsl(var(--fg))]">
             Área administrativa
           </Link>
