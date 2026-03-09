@@ -1,22 +1,50 @@
-# Cuias Lazaretti — E-commerce (Next.js + Prisma + Neon + Mercado Pago + Melhor Envio)
+# file: README.md
 
-E-commerce premium/clean para cuias de chimarrão, bombas e acessórios.
+# Cuias Lazaretti
+
+E-commerce completo para a Cuias Lazaretti, desenvolvido com Next.js, TypeScript, Prisma e PostgreSQL, com foco em conversão, operação simples e experiência moderna.
 
 ## Stack
-- Next.js (App Router) + TypeScript
-- TailwindCSS
-- PostgreSQL (Neon) + Prisma
-- Admin auth por credentials (cookie httpOnly JWT) + role ADMIN
-- Checkout: Mercado Pago Checkout Pro
-- Frete: Melhor Envio (PAC) + fallback + Retirada em Erechim/RS
-- Deploy: Vercel
+- Next.js (App Router)
+- TypeScript
+- Tailwind CSS
+- Prisma ORM
+- PostgreSQL
+- Mercado Pago
+- Cloudinary
+- Vercel
+
+---
+
+## Funcionalidades
+- Catálogo de produtos
+- Variações com estoque
+- Carrinho
+- Checkout
+- Pagamento via Mercado Pago
+- Página pública do pedido
+- Confirmação robusta do pagamento via retorno + webhook
+- Admin de produtos
+- Admin de pedidos
+- Admin de estoque
+- Botão de WhatsApp
+- SEO base
+- Analytics preparado
+
+---
 
 ## Requisitos
-- Node.js LTS
-- npm
-- Banco Postgres (Neon)
+- Node.js 20+
+- PostgreSQL
+- Conta Mercado Pago
+- Conta Cloudinary
+- Conta Vercel
 
-## Setup (Windows / VS Code)
-### 1) Instalar deps
-```bat
-npm install
+---
+
+## Setup local
+
+### 1. Clonar o projeto
+```bash
+git clone <URL_DO_REPO>
+cd cuias-lazaretti
