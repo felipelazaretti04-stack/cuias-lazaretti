@@ -80,7 +80,7 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
                             priority={i === 0}
                             quality={92}
                             sizes="100vw"
-                            className="object-contain bg-black"
+                            className="object-cover"
                           />
                         ) : null}
                       </div>

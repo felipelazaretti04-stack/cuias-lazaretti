@@ -101,7 +101,6 @@ export async function quotePACWithMelhorEnvio(cep: string, weightKg = 0.6) {
       ? data.services
       : [];
 
-  // Filtra candidatos PAC
   const pacCandidates = services.filter((s) => {
     const name = String(s?.name || s?.service || "").toUpperCase();
     return name.includes("PAC");
@@ -109,7 +108,6 @@ export async function quotePACWithMelhorEnvio(cep: string, weightKg = 0.6) {
 
   console.log("ME PAC candidates:", JSON.stringify(pacCandidates, null, 2));
 
-  // Seleciona PAC válido (sem erro e com preço > 0)
   const pac = pacCandidates.find((s) => {
     const price = Number(
       s?.price ??
@@ -148,6 +146,7 @@ export async function quotePACWithMelhorEnvio(cep: string, weightKg = 0.6) {
     pac?.deadline ??
     NaN
   );
+
 
   console.log("Preço de extração ME:", price, "Dias de entrega:", deliveryDays);
 

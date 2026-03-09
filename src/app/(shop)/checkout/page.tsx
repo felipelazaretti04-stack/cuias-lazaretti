@@ -1,3 +1,4 @@
+// file: src/app/(shop)/checkout/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -32,8 +33,11 @@ function formatBRL(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+function onlyDigits(value: string) {
+  return (value || "").replace(/\D/g, "");
+}
+
 export default function CheckoutPage() {
-  // carrinho
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [subtotalCents, setSubtotalCents] = useState(0);
   const [loadingCart, setLoadingCart] = useState(true);
@@ -43,12 +47,10 @@ export default function CheckoutPage() {
   const [options, setOptions] = useState<ShippingOption[]>([]);
   const [selectedIdx, setSelectedIdx] = useState(0);
 
-  // dados cliente
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
 
-  // endereço (PAC)
   const [addressLine, setAddressLine] = useState("");
   const [number, setNumber] = useState("");
   const [district, setDistrict] = useState("");
@@ -56,10 +58,8 @@ export default function CheckoutPage() {
   const [uf, setUf] = useState("");
   const [complement, setComplement] = useState("");
 
-  // pickup: salva apenas city/uf + note
   const [note, setNote] = useState("");
 
-  // cupom
   const [couponCode, setCouponCode] = useState("");
   const [couponApplied, setCouponApplied] = useState<{ code: string; type: string; value: number } | null>(null);
   const [couponErr, setCouponErr] = useState<string | null>(null);
@@ -69,8 +69,8 @@ export default function CheckoutPage() {
   const [err, setErr] = useState<string | null>(null);
 
   const selected = options[selectedIdx];
+  const showPAC = method === "PAC";
 
-  // busca carrinho
   useEffect(() => {
     fetch("/api/cart/get")
       .then((r) => r.json())
@@ -82,55 +82,102 @@ export default function CheckoutPage() {
   }, []);
 
   async function quote() {
-    // Não cota PAC sem CEP válido
-    if (method === "PAC" && cep.replace(/\D/g, "").length !== 8) {
+    const cepDigits = onlyDigits(cep);
+
+    if (method === "PAC" && cepDigits.length !== 8) {
       setOptions([]);
+      setSelectedIdx(0);
+      setErr("Informe um CEP válido");
       return;
     }
 
     setErr(null);
     setLoadingQuote(true);
-    const res = await fetch("/api/checkout/quote-shipping", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ method, cep }),
-    });
-    setLoadingQuote(false);
 
-    if (!res.ok) {
-      const data = await res.json().catch(() => null);
-      setErr(data?.error || "Falha ao cotar frete");
-      return;
+    try {
+      if (method === "PICKUP") {
+        const res = await fetch("/api/checkout/quote-shipping", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ method, cep }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => null);
+          setErr(data?.error || "Falha ao cotar frete");
+          setOptions([]);
+          setSelectedIdx(0);
+          return;
+        }
+
+        const data = await res.json();
+        setOptions(data.options || []);
+        setSelectedIdx(0);
+        return;
+      }
+
+      const [shipRes, cepRes] = await Promise.all([
+        fetch("/api/checkout/quote-shipping", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ method, cep: cepDigits }),
+        }),
+        fetch("/api/checkout/address-by-cep", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ cep: cepDigits }),
+        }),
+      ]);
+
+      const shipData = await shipRes.json().catch(() => null);
+      const cepData = await cepRes.json().catch(() => null);
+
+      if (!shipRes.ok) {
+        setErr(shipData?.error || "Falha ao cotar frete");
+        setOptions([]);
+        setSelectedIdx(0);
+      } else {
+        setOptions(shipData?.options || []);
+        setSelectedIdx(0);
+      }
+
+      if (cepRes.ok && cepData) {
+        setAddressLine((prev) => prev || cepData.addressLine || "");
+        setDistrict((prev) => prev || cepData.district || "");
+        setCity((prev) => prev || cepData.city || "");
+        setUf((prev) => prev || cepData.uf || "");
+        setComplement((prev) => prev || cepData.complement || "");
+      }
+    } finally {
+      setLoadingQuote(false);
     }
-    const data = await res.json();
-    setOptions(data.options || []);
-    setSelectedIdx(0);
   }
 
-
   useEffect(() => {
-    // PICKUP: cota direto | PAC: só cota se CEP tiver 8 dígitos
-    if (method === "PICKUP" || cep.replace(/\D/g, "").length === 8) {
+    if (method === "PICKUP") {
       quote();
-    } else {
-      // Limpa opções quando muda pra PAC sem CEP
-      setOptions([]);
+      return;
     }
+
+    if (onlyDigits(cep).length !== 8) {
+      setOptions([]);
+      setSelectedIdx(0);
+      return;
+    }
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [method]);
 
-
-  const showPAC = method === "PAC";
-
-  // cálculos
   const shippingCents = selected?.priceCents || 0;
+
   const discountCents = useMemo(() => {
     if (!couponApplied) return 0;
     if (couponApplied.type === "PERCENT") {
       return Math.floor((subtotalCents * couponApplied.value) / 100);
     }
-    return Math.min(couponApplied.value, subtotalCents); // FIXED em centavos
+    return Math.min(couponApplied.value, subtotalCents);
   }, [couponApplied, subtotalCents]);
+
   const totalCents = Math.max(0, subtotalCents + shippingCents - discountCents);
 
   const canPay = useMemo(() => {
@@ -141,7 +188,7 @@ export default function CheckoutPage() {
     if (!selected) return false;
 
     if (showPAC) {
-      if (!cep.replace(/\D/g, "")) return false;
+      if (onlyDigits(cep).length !== 8) return false;
       if (!addressLine.trim()) return false;
       if (!number.trim()) return false;
       if (!district.trim()) return false;
@@ -151,6 +198,7 @@ export default function CheckoutPage() {
       if (!city.trim()) return false;
       if (!uf.trim()) return false;
     }
+
     return true;
   }, [cartItems, name, email, phone, selected, showPAC, cep, addressLine, number, district, city, uf]);
 
@@ -186,10 +234,22 @@ export default function CheckoutPage() {
       couponCode: couponApplied?.code || null,
       shipping: {
         method,
-        cep: showPAC ? cep : undefined,
+        cep: showPAC ? onlyDigits(cep) : undefined,
         address: showPAC
-          ? { addressLine, number, district, city, uf, complement, cep }
-          : { city, uf, note },
+          ? {
+              addressLine,
+              number,
+              district,
+              city,
+              uf,
+              complement,
+              cep: onlyDigits(cep),
+            }
+          : {
+              city,
+              uf,
+              note,
+            },
         option: selected,
       },
     };
@@ -244,7 +304,6 @@ export default function CheckoutPage() {
 
       <div className="mt-8 grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
-          {/* ITENS DO CARRINHO */}
           <div className="card p-6">
             <div className="text-sm font-semibold">Itens ({cartItems.length})</div>
             <div className="mt-4 space-y-3">
@@ -268,15 +327,16 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {/* ENTREGA */}
           <div className="card p-6">
             <div className="text-sm font-semibold">Entrega</div>
+
             <div className="mt-3 grid gap-3 md:grid-cols-2">
               <label className="rounded-2xl border border-[hsl(var(--border))] bg-white p-4 cursor-pointer">
                 <input type="radio" checked={method === "PICKUP"} onChange={() => setMethod("PICKUP")} />
                 <div className="mt-2 text-sm font-medium">Retirada em Erechim/RS</div>
                 <div className="mt-1 text-xs text-[hsl(var(--muted))]">Sem custo de frete</div>
               </label>
+
               <label className="rounded-2xl border border-[hsl(var(--border))] bg-white p-4 cursor-pointer">
                 <input type="radio" checked={method === "PAC"} onChange={() => setMethod("PAC")} />
                 <div className="mt-2 text-sm font-medium">PAC</div>
@@ -288,7 +348,11 @@ export default function CheckoutPage() {
               <div className="mt-4 grid gap-2 max-w-sm">
                 <Label>CEP</Label>
                 <div className="flex gap-2">
-                  <Input value={cep} onChange={(e) => setCep(e.target.value)} placeholder="00000-000" />
+                  <Input
+                    value={cep}
+                    onChange={(e) => setCep(e.target.value)}
+                    placeholder="00000-000"
+                  />
                   <Button type="button" variant="secondary" onClick={quote} disabled={loadingQuote}>
                     {loadingQuote ? "..." : "Cotar"}
                   </Button>
@@ -319,11 +383,18 @@ export default function CheckoutPage() {
                     <div className="text-sm font-semibold">{formatBRL(o.priceCents)}</div>
                   </label>
                 ))}
+
+                {options.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-[hsl(var(--border))] p-4 text-sm text-[hsl(var(--muted))]">
+                    {showPAC
+                      ? "Informe um CEP válido e clique em Cotar."
+                      : "Selecione uma opção de entrega."}
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
 
-          {/* DADOS DO CLIENTE */}
           <div className="card p-6">
             <div className="text-sm font-semibold">Seus dados</div>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -342,7 +413,6 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {/* ENDEREÇO */}
           <div className="card p-6">
             <div className="text-sm font-semibold">{showPAC ? "Endereço (PAC)" : "Retirada (Erechim/RS)"}</div>
 
@@ -397,11 +467,12 @@ export default function CheckoutPage() {
           </div>
 
           {err && (
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{err}</div>
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+              {err}
+            </div>
           )}
         </div>
 
-        {/* RESUMO */}
         <div className="card p-6 h-fit space-y-4">
           <div className="text-sm font-semibold">Resumo do pedido</div>
 
@@ -426,7 +497,6 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {/* Cupom */}
           <div className="border-t border-[hsl(var(--border))] pt-4">
             <div className="text-sm font-medium">Cupom de desconto</div>
             <div className="mt-2 flex gap-2">
@@ -440,11 +510,13 @@ export default function CheckoutPage() {
                 Aplicar
               </Button>
             </div>
+
             {couponApplied && (
               <div className="mt-2 text-xs text-emerald-700">
                 ✓ Cupom <b>{couponApplied.code}</b> aplicado
               </div>
             )}
+
             {couponErr && <div className="mt-2 text-xs text-red-700">{couponErr}</div>}
           </div>
 
