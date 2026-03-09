@@ -95,25 +95,51 @@ export async function quotePACWithMelhorEnvio(cep: string, weightKg = 0.6) {
     throw new Error("Resposta inválida do Melhor Envio");
   }
 
+  // DEBUG - Ver resposta completa
+  console.log("ME raw response:", JSON.stringify(data, null, 2));
+
   const services: any[] = Array.isArray(data)
     ? data
     : Array.isArray(data?.services)
       ? data.services
       : [];
 
+  // DEBUG - Ver array de serviços
+  console.log("ME parsed services:", services);
+
   const pac = services.find((s) => {
     const name = String(s?.name || s?.service || "").toUpperCase();
     return name.includes("PAC");
   });
 
+  // DEBUG - Ver objeto PAC selecionado
+  console.log("ME selected PAC:", pac);
+
   if (!pac) {
     throw new Error("Serviço PAC não retornado pelo Melhor Envio");
   }
 
-  const price = Number(pac?.price ?? pac?.custom_price ?? pac?.cost ?? pac?.value ?? 0);
-  const deliveryDays = Number(
-    pac?.delivery_time ?? pac?.delivery_range?.max ?? pac?.deliveryTime ?? pac?.deadline ?? NaN
+  // Tenta várias propriedades possíveis
+  const price = Number(
+    pac?.price ?? 
+    pac?.custom_price ?? 
+    pac?.cost ?? 
+    pac?.value ?? 
+    pac?.packages?.[0]?.price ??
+    pac?.discount?.price ??
+    0
   );
+  
+  const deliveryDays = Number(
+    pac?.delivery_time ?? 
+    pac?.delivery_range?.max ?? 
+    pac?.deliveryTime ?? 
+    pac?.deadline ?? 
+    NaN
+  );
+
+  // DEBUG - Ver valores extraídos
+  console.log("ME extracted price:", price, "deliveryDays:", deliveryDays);
 
   if (!Number.isFinite(price) || price <= 0) {
     throw new Error("Preço inválido do Melhor Envio");
@@ -126,6 +152,7 @@ export async function quotePACWithMelhorEnvio(cep: string, weightKg = 0.6) {
     deliveryDays: Number.isFinite(deliveryDays) ? deliveryDays : undefined,
   };
 }
+
 
 export async function quoteShipping(input: {
   method: "PICKUP" | "PAC";
