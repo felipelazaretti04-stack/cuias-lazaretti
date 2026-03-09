@@ -110,7 +110,7 @@ export async function POST(req: Request) {
       shippingMethod: method,
       shippingProvider: selected.provider,
       shippingServiceName: selected.serviceName,
-      shippingDebugMessage: selected.provider === "FALLBACK" ? selected.debugMessage ?? null : null,
+      shippingDebugMessage: selected.provider === "FALLBACK" ? (selected as any).debugMessage ?? null : null,
       shippingAddressJson: parsed.data.shipping.address as any,
       shippingCostCents: selected.priceCents,
 
