@@ -5,7 +5,7 @@ import { WhatsAppFloat } from "@/components/shop/WhatsAppFloat";
 
 export default function ShopLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-dvh bg-[hsl(var(--bg))]">
       <Header />
       <main>{children}</main>
       <Footer />
