@@ -2,49 +2,41 @@
 
 # Cuias Lazaretti
 
-E-commerce completo para a Cuias Lazaretti, desenvolvido com Next.js, TypeScript, Prisma e PostgreSQL, com foco em conversão, operação simples e experiência moderna.
+E-commerce full-stack da Cuias Lazaretti, focado em vendas no Brasil, com catálogo, carrinho, checkout, frete, pagamento via Mercado Pago, painel administrativo, rastreio de pedidos, página de acompanhamento e deploy em produção.
 
 ## Stack
+
 - Next.js (App Router)
 - TypeScript
 - Tailwind CSS
-- Prisma ORM
+- Prisma
 - PostgreSQL
 - Mercado Pago
-- Cloudinary
 - Vercel
-
----
+- Neon
 
 ## Funcionalidades
+
+- Home responsiva
 - Catálogo de produtos
-- Variações com estoque
+- Página de produto
 - Carrinho
 - Checkout
-- Pagamento via Mercado Pago
-- Página pública do pedido
-- Confirmação robusta do pagamento via retorno + webhook
-- Admin de produtos
+- Frete com cotação e fallback
+- Pagamento Mercado Pago
+- Página pública de pedido
+- Página "Meus pedidos" por e-mail
 - Admin de pedidos
-- Admin de estoque
-- Botão de WhatsApp
-- SEO base
-- Analytics preparado
-
----
+- Atualização de status
+- Rastreio com código e link
+- WhatsApp visível no site
+- Menu mobile e navegação otimizada
 
 ## Requisitos
+
 - Node.js 20+
-- PostgreSQL
+- Banco PostgreSQL
 - Conta Mercado Pago
-- Conta Cloudinary
-- Conta Vercel
+- Variáveis de ambiente configuradas
 
----
 
-## Setup local
-
-### 1. Clonar o projeto
-```bash
-git clone <URL_DO_REPO>
-cd cuias-lazaretti

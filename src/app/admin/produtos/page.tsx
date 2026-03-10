@@ -1,7 +1,7 @@
-// file: src/app/admin/produtos/page.tsx
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { DeleteProductButton } from "@/components/admin/DeleteProductButton";
 
 type SearchParams = Promise<{
   q?: string;
@@ -50,7 +50,6 @@ export default async function AdminProdutosPage({
     take: 500,
   });
 
-  // Helpers
   const getMinPrice = (variants: { priceCents: number }[]) =>
     variants.length ? Math.min(...variants.map((v) => v.priceCents)) : 0;
 
@@ -68,6 +67,16 @@ export default async function AdminProdutosPage({
 
   return (
     <AdminShell title="Produtos">
+      {/* Botão Novo Produto */}
+      <div className="mb-4 flex justify-end">
+        <Link
+          href="/admin/produtos/novo"
+          className="rounded-xl bg-black px-4 py-2 text-sm text-white hover:bg-gray-800"
+        >
+          + Novo Produto
+        </Link>
+      </div>
+
       {/* Filtros */}
       <form className="grid gap-3 rounded-2xl border border-[hsl(var(--border))] bg-white p-4 md:grid-cols-5">
         <input
@@ -196,12 +205,15 @@ export default async function AdminProdutosPage({
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <Link
-                        href={`/admin/produtos/${product.id}`}
-                        className="rounded-xl border border-[hsl(var(--border))] px-3 py-2 text-xs"
-                      >
-                        Editar
-                      </Link>
+                      <div className="flex gap-2">
+                        <Link
+                          href={`/admin/produtos/${product.id}`}
+                          className="rounded-xl border border-[hsl(var(--border))] px-3 py-2 text-xs hover:bg-gray-50"
+                        >
+                          Editar
+                        </Link>
+                        <DeleteProductButton productId={product.id} />
+                      </div>
                     </td>
                   </tr>
                 );

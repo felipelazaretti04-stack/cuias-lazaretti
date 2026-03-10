@@ -10,6 +10,7 @@ import { MediaPicker } from "@/components/admin/MediaPicker";
 import { CameraUploadButton } from "@/components/admin/CameraUploadButton";
 
 type Category = { id: string; name: string };
+type Carousel = { id: string; title: string; key: string; type: string };
 
 type ProductImage = {
   url: string;
@@ -18,7 +19,7 @@ type ProductImage = {
 };
 
 type Variant = {
-  id?: string; // <-- adicionar
+  id?: string;
   sku: string;
   priceCents: number;
   compareAtCents?: number | null;
@@ -29,7 +30,6 @@ type Variant = {
   color?: string | null;
   personalization?: string | null;
 };
-
 
 const SIZE_OPTIONS = ["Pequeno", "Médio", "Grande", "Extra Grande"] as const;
 const FINISH_OPTIONS = ["Lisa", "Trabalhada", "Pintada", "Resinada"] as const;
@@ -49,6 +49,7 @@ export default function EditProductClient({ productId }: { productId: string }) 
   const [ok, setOk] = useState<string | null>(null);
 
   const [categories, setCategories] = useState<Category[]>([]);
+  const [carousels, setCarousels] = useState<Carousel[]>([]);
 
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -60,6 +61,7 @@ export default function EditProductClient({ productId }: { productId: string }) 
   const [isActive, setIsActive] = useState(true);
   const [isFeatured, setIsFeatured] = useState(false);
   const [isNew, setIsNew] = useState(false);
+  const [selectedCarousels, setSelectedCarousels] = useState<string[]>([]);
 
   const [isPersonalized, setIsPersonalized] = useState(false);
   const [productionDays, setProductionDays] = useState("0");
@@ -69,6 +71,25 @@ export default function EditProductClient({ productId }: { productId: string }) 
 
   const [newImageUrl, setNewImageUrl] = useState("");
   const [newImageAlt, setNewImageAlt] = useState("");
+
+  // Carregar carrosséis
+  useEffect(() => {
+    fetch("/api/admin/conteudo")
+      .then((r) => r.json())
+      .then((d) => {
+        const items = d.items || [];
+        const carouselItems = items
+          .filter((item: { type: string }) => item.type === "carousel")
+          .map((item: { id: string; title: string; key: string; type: string }) => ({
+            id: item.id,
+            title: item.title,
+            key: item.key,
+            type: item.type,
+          }));
+        setCarousels(carouselItems);
+      })
+      .catch(() => setCarousels([]));
+  }, []);
 
   async function load() {
     setLoading(true);
@@ -82,7 +103,6 @@ export default function EditProductClient({ productId }: { productId: string }) 
       setErr(data?.error || "Falha ao carregar produto");
       return;
     }
-    // ← REMOVIDO o setErr daqui!
 
     const p = data.product as any;
     const cats = (data.categories || []) as Category[];
@@ -98,6 +118,12 @@ export default function EditProductClient({ productId }: { productId: string }) 
     setIsActive(!!p.isActive);
     setIsFeatured(!!p.isFeatured);
     setIsNew(!!p.isNew);
+    
+    // Carregar carrosséis selecionados
+    const selected: string[] = p.carousels || [];
+    if (p.isFeatured && !selected.includes("featured")) selected.push("featured");
+    if (p.isNew && !selected.includes("new")) selected.push("new");
+    setSelectedCarousels(selected);
 
     setIsPersonalized(!!p.isPersonalized);
     setProductionDays(String(p.productionDays ?? 0));
@@ -110,7 +136,7 @@ export default function EditProductClient({ productId }: { productId: string }) 
     setImages(imgs);
 
     const vars: Variant[] = (p.variants || []).map((v: any) => ({
-      id: v.id, // <-- aqui
+      id: v.id,
       sku: v.sku,
       priceCents: v.priceCents,
       compareAtCents: v.compareAtCents ?? null,
@@ -126,18 +152,18 @@ export default function EditProductClient({ productId }: { productId: string }) 
       vars.length
         ? vars
         : [
-          {
-            sku: "",
-            priceCents: 0,
-            compareAtCents: null,
-            stock: 0,
-            isActive: true,
-            size: "Médio",
-            finish: "Lisa",
-            color: "Natural",
-            personalization: "Não",
-          },
-        ]
+            {
+              sku: "",
+              priceCents: 0,
+              compareAtCents: null,
+              stock: 0,
+              isActive: true,
+              size: "Médio",
+              finish: "Lisa",
+              color: "Natural",
+              personalization: "Não",
+            },
+          ]
     );
   }
 
@@ -145,6 +171,12 @@ export default function EditProductClient({ productId }: { productId: string }) 
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  function toggleCarousel(key: string) {
+    setSelectedCarousels((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  }
 
   const canSave = useMemo(() => {
     if (!name.trim()) return false;
@@ -158,27 +190,6 @@ export default function EditProductClient({ productId }: { productId: string }) 
     }
     return true;
   }, [name, slug, variants]);
-
-  function addVariant() {
-    setVariants((arr) => [
-      ...arr,
-      {
-        sku: "",
-        priceCents: arr[0]?.priceCents || 0,
-        compareAtCents: null,
-        stock: 0,
-        isActive: true,
-        size: arr[0]?.size || "Médio",
-        finish: arr[0]?.finish || "Lisa",
-        color: arr[0]?.color || "Natural",
-        personalization: arr[0]?.personalization || "Não",
-      },
-    ]);
-  }
-
-  function removeVariant(idx: number) {
-    setVariants((arr) => arr.filter((_, i) => i !== idx));
-  }
 
   function addImage(url: string, alt?: string) {
     const nextSort = images.length ? Math.max(...images.map((i) => i.sortOrder)) + 1 : 0;
@@ -199,12 +210,13 @@ export default function EditProductClient({ productId }: { productId: string }) 
       slug: slug.trim(),
       categoryId: categoryId || null,
 
-      description: description ? description : null,
-      care: care ? care : null,
+      description: description || null,
+      care: care || null,
 
       isActive,
-      isFeatured,
-      isNew,
+      isFeatured: selectedCarousels.includes("featured"),
+      isNew: selectedCarousels.includes("new"),
+      carousels: selectedCarousels,
 
       isPersonalized,
       productionDays: Number(productionDays) || 0,
@@ -216,7 +228,7 @@ export default function EditProductClient({ productId }: { productId: string }) 
       })),
 
       variants: variants.map((v) => ({
-        id: v.id, // <-- aqui
+        id: v.id,
         sku: v.sku.trim(),
         priceCents: Number(v.priceCents) || 0,
         compareAtCents: v.compareAtCents == null ? null : Number(v.compareAtCents),
@@ -289,35 +301,24 @@ export default function EditProductClient({ productId }: { productId: string }) 
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <Label>Cuidados</Label>
+                <Label>Cuidados <span className="text-[hsl(var(--muted))]">(opcional)</span></Label>
                 <Textarea value={care} onChange={(e) => setCare(e.target.value)} rows={3} />
               </div>
             </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <div className="grid gap-3 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--bg))] p-4 md:grid-cols-3">
+              {/* Ativo + Personalizável + Prazo */}
+              <div className="grid gap-3 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--bg))] p-4">
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
                   Ativo
                 </label>
                 <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} />
-                  Destaque
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={isNew} onChange={(e) => setIsNew(e.target.checked)} />
-                  Novidade
-                </label>
-              </div>
-
-              <div className="grid gap-3 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--bg))] p-4 md:grid-cols-2">
-                <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={isPersonalized} onChange={(e) => setIsPersonalized(e.target.checked)} />
                   Produto personalizável
                 </label>
-
-                <div className="space-y-2">
-                  <Label>Prazo (dias)</Label>
+                <div className="space-y-1">
+                  <Label>Prazo produção (dias)</Label>
                   <Input
                     value={productionDays}
                     onChange={(e) => setProductionDays(e.target.value)}
@@ -326,9 +327,31 @@ export default function EditProductClient({ productId }: { productId: string }) 
                   />
                 </div>
               </div>
+
+              {/* Carrosséis dinâmicos */}
+              <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--bg))] p-4">
+                <Label>Exibir em carrosséis</Label>
+                <div className="mt-2 flex flex-col gap-2 max-h-40 overflow-y-auto">
+                  {carousels.length === 0 ? (
+                    <span className="text-xs text-[hsl(var(--muted))]">Nenhum carrossel cadastrado</span>
+                  ) : (
+                    carousels.map((c) => (
+                      <label key={c.key} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={selectedCarousels.includes(c.key)}
+                          onChange={() => toggleCarousel(c.key)}
+                        />
+                        {c.title}
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
+          {/* IMAGENS */}
           <div className="card p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -377,7 +400,6 @@ export default function EditProductClient({ productId }: { productId: string }) 
                       Remover
                     </button>
                   </div>
-
                   <div className="mt-2">
                     <Input
                       value={String(img.sortOrder)}
@@ -389,32 +411,37 @@ export default function EditProductClient({ productId }: { productId: string }) 
                   </div>
                 </div>
               ))}
-              {images.length === 0 ? <div className="col-span-2 text-sm text-[hsl(var(--muted))]">Sem imagens.</div> : null}
+              {images.length === 0 && <div className="col-span-2 text-sm text-[hsl(var(--muted))]">Sem imagens.</div>}
             </div>
           </div>
 
+          {/* VARIANTES */}
           <div className="card p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold">Variantes</div>
-                <div className="text-xs text-[hsl(var(--muted))]">Select + “Outro” para padronizar.</div>
+                <div className="text-xs text-[hsl(var(--muted))]">Select + "Outro" para padronizar.</div>
               </div>
-              <Button type="button" variant="secondary" onClick={() => {
-                setVariants((arr) => [
-                  ...arr,
-                  {
-                    sku: "",
-                    priceCents: arr[0]?.priceCents || 0,
-                    compareAtCents: null,
-                    stock: 0,
-                    isActive: true,
-                    size: arr[0]?.size || "Médio",
-                    finish: arr[0]?.finish || "Lisa",
-                    color: arr[0]?.color || "Natural",
-                    personalization: arr[0]?.personalization || "Não",
-                  },
-                ]);
-              }}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setVariants((arr) => [
+                    ...arr,
+                    {
+                      sku: "",
+                      priceCents: arr[0]?.priceCents || 0,
+                      compareAtCents: null,
+                      stock: 0,
+                      isActive: true,
+                      size: arr[0]?.size || "Médio",
+                      finish: arr[0]?.finish || "Lisa",
+                      color: arr[0]?.color || "Natural",
+                      personalization: arr[0]?.personalization || "Não",
+                    },
+                  ]);
+                }}
+              >
                 Adicionar variante
               </Button>
             </div>
@@ -468,21 +495,22 @@ export default function EditProductClient({ productId }: { productId: string }) 
                       />
                     </div>
 
-                    {/* selects */}
                     <div className="space-y-2">
                       <Label>Tamanho</Label>
                       <select
-                        value={SIZE_OPTIONS.includes((v.size || "") as any) ? (v.size as any) : "Outro"}
+                        value={SIZE_OPTIONS.includes(v.size as typeof SIZE_OPTIONS[number]) ? v.size! : "Outro"}
                         onChange={(e) => {
                           const val = e.target.value;
                           setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, size: val === "Outro" ? "" : val } : it)));
                         }}
                         className="w-full rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 text-sm"
                       >
-                        {SIZE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                        {SIZE_OPTIONS.map((o) => (
+                          <option key={o} value={o}>{o}</option>
+                        ))}
                         <option value="Outro">Outro</option>
                       </select>
-                      {SIZE_OPTIONS.includes((v.size || "") as any) ? null : (
+                      {!SIZE_OPTIONS.includes(v.size as typeof SIZE_OPTIONS[number]) && (
                         <Input value={v.size || ""} onChange={(e) => setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, size: e.target.value } : it)))} />
                       )}
                     </div>
@@ -490,17 +518,19 @@ export default function EditProductClient({ productId }: { productId: string }) 
                     <div className="space-y-2">
                       <Label>Acabamento</Label>
                       <select
-                        value={FINISH_OPTIONS.includes((v.finish || "") as any) ? (v.finish as any) : "Outro"}
+                        value={FINISH_OPTIONS.includes(v.finish as typeof FINISH_OPTIONS[number]) ? v.finish! : "Outro"}
                         onChange={(e) => {
                           const val = e.target.value;
                           setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, finish: val === "Outro" ? "" : val } : it)));
                         }}
                         className="w-full rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 text-sm"
                       >
-                        {FINISH_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                        {FINISH_OPTIONS.map((o) => (
+                          <option key={o} value={o}>{o}</option>
+                        ))}
                         <option value="Outro">Outro</option>
                       </select>
-                      {FINISH_OPTIONS.includes((v.finish || "") as any) ? null : (
+                      {!FINISH_OPTIONS.includes(v.finish as typeof FINISH_OPTIONS[number]) && (
                         <Input value={v.finish || ""} onChange={(e) => setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, finish: e.target.value } : it)))} />
                       )}
                     </div>
@@ -508,17 +538,19 @@ export default function EditProductClient({ productId }: { productId: string }) 
                     <div className="space-y-2">
                       <Label>Cor</Label>
                       <select
-                        value={COLOR_OPTIONS.includes((v.color || "") as any) ? (v.color as any) : "Outro"}
+                        value={COLOR_OPTIONS.includes(v.color as typeof COLOR_OPTIONS[number]) ? v.color! : "Outro"}
                         onChange={(e) => {
                           const val = e.target.value;
                           setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, color: val === "Outro" ? "" : val } : it)));
                         }}
                         className="w-full rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 text-sm"
                       >
-                        {COLOR_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                        {COLOR_OPTIONS.map((o) => (
+                          <option key={o} value={o}>{o}</option>
+                        ))}
                         <option value="Outro">Outro</option>
                       </select>
-                      {COLOR_OPTIONS.includes((v.color || "") as any) ? null : (
+                      {!COLOR_OPTIONS.includes(v.color as typeof COLOR_OPTIONS[number]) && (
                         <Input value={v.color || ""} onChange={(e) => setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, color: e.target.value } : it)))} />
                       )}
                     </div>
@@ -526,11 +558,13 @@ export default function EditProductClient({ productId }: { productId: string }) 
                     <div className="space-y-2">
                       <Label>Personalização</Label>
                       <select
-                        value={(v.personalization || "Não") as any}
+                        value={v.personalization || "Não"}
                         onChange={(e) => setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, personalization: e.target.value } : it)))}
                         className="w-full rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 text-sm"
                       >
-                        {PERSONAL_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                        {PERSONAL_OPTIONS.map((o) => (
+                          <option key={o} value={o}>{o}</option>
+                        ))}
                       </select>
                     </div>
 
@@ -560,8 +594,8 @@ export default function EditProductClient({ productId }: { productId: string }) 
             </div>
           </div>
 
-          {err ? <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{err}</div> : null}
-          {ok ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">{ok}</div> : null}
+          {err && <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{err}</div>}
+          {ok && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">{ok}</div>}
 
           <div className="flex flex-wrap gap-2">
             <Button onClick={save} disabled={!canSave || saving}>

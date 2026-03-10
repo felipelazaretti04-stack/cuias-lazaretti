@@ -45,6 +45,7 @@ model Product {
   images         ProductImage[]
   reviews        Review[]
   variants       Variant[]
+  carousels      String[]       @default([])  // array de keys dos carrosséis
 }
 
 model ProductImage {

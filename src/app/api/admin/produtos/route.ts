@@ -57,7 +57,7 @@ export async function GET() {
 }
 
 const variantSchema = z.object({
-  sku: z.string().max(80).optional().nullable(), // aceita vazio
+  sku: z.string().max(80).optional().nullable(),
   priceCents: z.coerce.number().int().min(1),
   compareAtCents: z.coerce.number().int().optional().nullable(),
   stock: z.coerce.number().int().min(0),
@@ -85,6 +85,7 @@ const schema = z.object({
   isPersonalized: z.coerce.boolean().default(false),
   productionDays: z.coerce.number().int().min(0).max(60).default(0),
   categoryId: z.string().optional().nullable(),
+  carousels: z.array(z.string()).default([]), // <-- NOVO
   images: z.array(imageSchema).max(20).default([]),
   variants: z.array(variantSchema).min(1).max(100),
 });
@@ -100,6 +101,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Dados inválidos", issues: parsed.error.flatten() }, { status: 400 });
   }
 
+  // Deriva isFeatured e isNew dos carousels
+  const carousels = parsed.data.carousels;
+  const isFeatured = carousels.includes("featured") || parsed.data.isFeatured;
+  const isNew = carousels.includes("new") || parsed.data.isNew;
+
   try {
     const product = await prisma.$transaction(async (tx) => {
       const p = await tx.product.create({
@@ -109,11 +115,12 @@ export async function POST(req: Request) {
           description: parsed.data.description ?? null,
           care: parsed.data.care ?? null,
           isActive: parsed.data.isActive,
-          isFeatured: parsed.data.isFeatured,
-          isNew: parsed.data.isNew,
+          isFeatured,
+          isNew,
           isPersonalized: parsed.data.isPersonalized,
           productionDays: parsed.data.productionDays,
           categoryId: parsed.data.categoryId || null,
+          carousels, // <-- NOVO
         },
       });
 
@@ -128,11 +135,9 @@ export async function POST(req: Request) {
         });
       }
 
-      // Criar variantes com SKU automático
       for (const v of parsed.data.variants) {
         let sku = (v.sku || "").trim();
-        
-        // Se SKU vazio, gera automaticamente
+
         if (!sku) {
           sku = buildSku({
             productSlug: parsed.data.slug,
@@ -144,7 +149,6 @@ export async function POST(req: Request) {
           });
         }
 
-        // Garante unicidade (tenta até 5x se colidir)
         for (let i = 0; i < 5; i++) {
           const exists = await tx.variant.findUnique({ where: { sku } });
           if (!exists) break;

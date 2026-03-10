@@ -31,7 +31,7 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
 }
 
 const variantSchema = z.object({
-  id: z.string().optional(), // Se tiver id, é update; se não, é create
+  id: z.string().optional(),
   sku: z.string().min(2).max(80),
   priceCents: z.coerce.number().int().min(1),
   compareAtCents: z.coerce.number().int().optional().nullable(),
@@ -60,6 +60,7 @@ const schema = z.object({
   isPersonalized: z.coerce.boolean().default(false),
   productionDays: z.coerce.number().int().min(0).max(60).default(0),
   categoryId: z.string().optional().nullable(),
+  carousels: z.array(z.string()).default([]), // <-- NOVO
   images: z.array(imageSchema).max(20).default([]),
   variants: z.array(variantSchema).min(1).max(100),
 });
@@ -78,6 +79,11 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     return NextResponse.json({ error: "Dados inválidos", issues: parsed.error.flatten() }, { status: 400 });
   }
 
+  // Deriva isFeatured e isNew dos carousels para manter compatibilidade
+  const carousels = parsed.data.carousels;
+  const isFeatured = carousels.includes("featured") || parsed.data.isFeatured;
+  const isNew = carousels.includes("new") || parsed.data.isNew;
+
   try {
     const updated = await prisma.$transaction(async (tx) => {
       // 1. Atualiza o produto
@@ -89,15 +95,16 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
           description: parsed.data.description ?? null,
           care: parsed.data.care ?? null,
           isActive: parsed.data.isActive,
-          isFeatured: parsed.data.isFeatured,
-          isNew: parsed.data.isNew,
+          isFeatured,
+          isNew,
           isPersonalized: parsed.data.isPersonalized,
           productionDays: parsed.data.productionDays,
           categoryId: parsed.data.categoryId || null,
+          carousels, // <-- NOVO
         },
       });
 
-      // 2. Imagens: pode deletar e recriar (não tem FK com pedidos)
+      // 2. Imagens
       await tx.productImage.deleteMany({ where: { productId: id } });
       if (parsed.data.images.length) {
         await tx.productImage.createMany({
@@ -110,12 +117,11 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
         });
       }
 
-      // 3. Variantes: upsert para não quebrar FK
+      // 3. Variantes
       const variantIds = parsed.data.variants
         .map((v) => v.id)
         .filter((vid): vid is string => !!vid);
 
-      // Deleta variantes que foram removidas (só se não tiverem pedidos)
       const existingVariants = await tx.variant.findMany({
         where: { productId: id },
         select: { id: true },
@@ -125,12 +131,10 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
         .filter((v) => !variantIds.includes(v.id))
         .map((v) => v.id);
 
-      // Tenta deletar variantes removidas (ignora se tiver FK)
       for (const vid of toDelete) {
         try {
           await tx.variant.delete({ where: { id: vid } });
         } catch {
-          // Variante tem pedidos vinculados, apenas desativa
           await tx.variant.update({
             where: { id: vid },
             data: { isActive: false },
@@ -138,7 +142,6 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
         }
       }
 
-      // Upsert das variantes
       for (const v of parsed.data.variants) {
         const variantData = {
           sku: v.sku,
@@ -153,13 +156,11 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
         };
 
         if (v.id) {
-          // Update existente
           await tx.variant.update({
             where: { id: v.id },
             data: variantData,
           });
         } else {
-          // Cria nova
           await tx.variant.create({
             data: {
               ...variantData,
@@ -178,6 +179,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     return NextResponse.json({ error: "Falha ao atualizar produto" }, { status: 400 });
   }
 }
+
 export async function DELETE(_: Request, ctx: { params: Promise<{ id: string }> }) {
   const session = await getAdminSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -186,7 +188,6 @@ export async function DELETE(_: Request, ctx: { params: Promise<{ id: string }> 
   const { id } = await ctx.params;
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
-  // tem pedido ligado a alguma variante deste produto?
   const hasOrderItem = await prisma.orderItem.findFirst({
     where: { variant: { productId: id } },
     select: { id: true },
@@ -208,4 +209,3 @@ export async function DELETE(_: Request, ctx: { params: Promise<{ id: string }> 
 
   return NextResponse.json({ ok: true, deleted: true });
 }
-

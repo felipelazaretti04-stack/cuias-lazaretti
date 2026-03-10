@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Textarea } from "@/components/ui/Textarea";
 import { track } from "@/lib/analytics";
+import Link from "next/link";
 
 type CartItem = {
   variantId: string;
@@ -295,12 +296,12 @@ export default function CheckoutPage() {
         <h1 className="text-2xl font-semibold">Checkout</h1>
         <div className="mt-6 card p-8">
           <div className="text-sm text-[hsl(var(--muted))]">Seu carrinho está vazio.</div>
-          <a
+          <Link
             href="/produtos"
             className="mt-4 inline-flex rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-white"
           >
             Ver produtos
-          </a>
+          </Link>
         </div>
       </div>
     );

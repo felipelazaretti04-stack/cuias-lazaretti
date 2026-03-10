@@ -12,6 +12,7 @@ import { MediaPicker } from "@/components/admin/MediaPicker";
 import { CameraUploadButton } from "@/components/admin/CameraUploadButton";
 
 type Category = { id: string; name: string };
+type Carousel = { id: string; title: string; key: string };
 
 type VariantDraft = {
   sku: string;
@@ -19,9 +20,9 @@ type VariantDraft = {
   finish?: string | null;
   color?: string | null;
   personalization?: string | null;
-  priceCents: string; // input
-  compareAtCents?: string; // input
-  stock: string; // input
+  priceCents: string;
+  compareAtCents?: string;
+  stock: string;
   isActive: boolean;
 };
 
@@ -46,12 +47,14 @@ function slugify(s: string) {
 export default function NovoProdutoPage() {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
+  const [carousels, setCarousels] = useState<Carousel[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
+  const [slugManual, setSlugManual] = useState(false); // controle manual
   const [categoryId, setCategoryId] = useState<string>("");
 
   const [description, setDescription] = useState("");
@@ -61,8 +64,7 @@ export default function NovoProdutoPage() {
   const [productionDays, setProductionDays] = useState("0");
 
   const [isActive, setIsActive] = useState(true);
-  const [isFeatured, setIsFeatured] = useState(false);
-  const [isNew, setIsNew] = useState(true);
+  const [selectedCarousels, setSelectedCarousels] = useState<string[]>([]);
 
   const [images, setImages] = useState<ImageDraft[]>([{ url: "", alt: "", sortOrder: "0" }]);
 
@@ -81,27 +83,52 @@ export default function NovoProdutoPage() {
   ]);
 
   useEffect(() => {
+    // Carregar categorias
     fetch("/api/admin/categorias")
       .then((r) => r.json())
       .then((d) => setCategories(d.categories || []))
       .catch(() => setCategories([]));
+
+    // Carregar carrosséis dinâmicos
+    fetch("/api/admin/conteudo")
+      .then((r) => r.json())
+      .then((d) => {
+        const items = d.items || [];
+        const carouselItems = items
+          .filter((item: { type: string }) => item.type === "carousel")
+          .map((item: { id: string; title: string; key: string }) => ({
+            id: item.id,
+            title: item.title,
+            key: item.key,
+          }));
+        setCarousels(carouselItems);
+      })
+      .catch(() => setCarousels([]));
   }, []);
 
-  // auto slug (mas respeita se o usuário editar manualmente)
+  // Auto slug - só atualiza se não foi editado manualmente
   useEffect(() => {
-    if (!slug.trim() && name.trim().length >= 2) {
+    if (!slugManual && name.trim().length >= 2) {
       setSlug(slugify(name));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [name]);
+  }, [name, slugManual]);
+
+  function handleSlugChange(value: string) {
+    setSlugManual(true);
+    setSlug(value);
+  }
+
+  function toggleCarousel(key: string) {
+    setSelectedCarousels((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  }
 
   const canSave = useMemo(() => {
     if (name.trim().length < 2) return false;
     if (slug.trim().length < 2) return false;
     if (!variants.length) return false;
     for (const v of variants) {
-      // SKU pode ser vazio: será gerado no backend
-      // if (v.sku.trim().length < 2) return false;
       const price = Number(v.priceCents);
       const stock = Number(v.stock);
       if (!Number.isFinite(price) || price < 1) return false;
@@ -137,7 +164,6 @@ export default function NovoProdutoPage() {
 
   function addImageFromPicker(url: string) {
     setImages((imgs) => {
-      // reaproveita primeira linha vazia
       if (imgs.length === 1 && !imgs[0].url.trim()) {
         return [{ ...imgs[0], url, sortOrder: imgs[0].sortOrder || "0" }];
       }
@@ -160,12 +186,13 @@ export default function NovoProdutoPage() {
       slug: slugify(slug),
 
       categoryId: categoryId || null,
-      description: description ? description : null,
-      care: care ? care : null,
+      description: description || null,
+      care: care || null,
 
       isActive: !!isActive,
-      isFeatured: !!isFeatured,
-      isNew: !!isNew,
+      isFeatured: selectedCarousels.includes("featured"),
+      isNew: selectedCarousels.includes("new"),
+      carousels: selectedCarousels,
 
       isPersonalized: !!isPersonalized,
       productionDays: Number(productionDays) || 0,
@@ -224,7 +251,7 @@ export default function NovoProdutoPage() {
 
             <div className="space-y-2">
               <Label>Slug</Label>
-              <Input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="cuia-premium-torpedo" />
+              <Input value={slug} onChange={(e) => handleSlugChange(e.target.value)} placeholder="cuia-premium-torpedo" />
               <div className="text-[11px] text-[hsl(var(--muted))]">
                 URL: <code>/produtos/{slugify(slug || name)}</code>
               </div>
@@ -248,7 +275,7 @@ export default function NovoProdutoPage() {
             </div>
 
             <div className="space-y-2 md:col-span-2">
-              <Label>Cuidados</Label>
+              <Label>Cuidados <span className="text-[hsl(var(--muted))]">(opcional)</span></Label>
               <Textarea value={care} onChange={(e) => setCare(e.target.value)} rows={4} />
             </div>
           </div>
@@ -276,14 +303,22 @@ export default function NovoProdutoPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Destaque / Lançamento</Label>
-              <div className="flex flex-col gap-2 rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2">
-                <label className="flex items-center gap-2 text-sm">
-                  <input checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} type="checkbox" /> Destaque
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input checked={isNew} onChange={(e) => setIsNew(e.target.checked)} type="checkbox" /> Novidade
-                </label>
+              <Label>Exibir em carrosséis</Label>
+              <div className="flex flex-col gap-2 rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 max-h-40 overflow-y-auto">
+                {carousels.length === 0 ? (
+                  <span className="text-xs text-[hsl(var(--muted))]">Nenhum carrossel cadastrado</span>
+                ) : (
+                  carousels.map((c) => (
+                    <label key={c.key} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={selectedCarousels.includes(c.key)}
+                        onChange={() => toggleCarousel(c.key)}
+                      />
+                      {c.title}
+                    </label>
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -303,7 +338,6 @@ export default function NovoProdutoPage() {
                 Adicionar imagem
               </Button>
             </div>
-
           </div>
 
           <div className="mt-4 grid gap-3">
@@ -397,7 +431,7 @@ export default function NovoProdutoPage() {
                   <div className="space-y-2">
                     <Label>Tamanho</Label>
                     <select
-                      value={SIZE_OPTIONS.includes((v.size || "") as any) ? (v.size as any) : "Outro"}
+                      value={SIZE_OPTIONS.includes(v.size as typeof SIZE_OPTIONS[number]) ? v.size! : "Outro"}
                       onChange={(e) => {
                         const val = e.target.value;
                         setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, size: val === "Outro" ? "" : val } : it)));
@@ -405,13 +439,11 @@ export default function NovoProdutoPage() {
                       className="w-full rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 text-sm"
                     >
                       {SIZE_OPTIONS.map((o) => (
-                        <option key={o} value={o}>
-                          {o}
-                        </option>
+                        <option key={o} value={o}>{o}</option>
                       ))}
                       <option value="Outro">Outro</option>
                     </select>
-                    {SIZE_OPTIONS.includes((v.size || "") as any) ? null : (
+                    {!SIZE_OPTIONS.includes(v.size as typeof SIZE_OPTIONS[number]) && (
                       <Input
                         value={v.size || ""}
                         onChange={(e) => setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, size: e.target.value } : it)))}
@@ -423,7 +455,7 @@ export default function NovoProdutoPage() {
                   <div className="space-y-2">
                     <Label>Acabamento</Label>
                     <select
-                      value={FINISH_OPTIONS.includes((v.finish || "") as any) ? (v.finish as any) : "Outro"}
+                      value={FINISH_OPTIONS.includes(v.finish as typeof FINISH_OPTIONS[number]) ? v.finish! : "Outro"}
                       onChange={(e) => {
                         const val = e.target.value;
                         setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, finish: val === "Outro" ? "" : val } : it)));
@@ -431,13 +463,11 @@ export default function NovoProdutoPage() {
                       className="w-full rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 text-sm"
                     >
                       {FINISH_OPTIONS.map((o) => (
-                        <option key={o} value={o}>
-                          {o}
-                        </option>
+                        <option key={o} value={o}>{o}</option>
                       ))}
                       <option value="Outro">Outro</option>
                     </select>
-                    {FINISH_OPTIONS.includes((v.finish || "") as any) ? null : (
+                    {!FINISH_OPTIONS.includes(v.finish as typeof FINISH_OPTIONS[number]) && (
                       <Input
                         value={v.finish || ""}
                         onChange={(e) => setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, finish: e.target.value } : it)))}
@@ -449,7 +479,7 @@ export default function NovoProdutoPage() {
                   <div className="space-y-2">
                     <Label>Cor</Label>
                     <select
-                      value={COLOR_OPTIONS.includes((v.color || "") as any) ? (v.color as any) : "Outro"}
+                      value={COLOR_OPTIONS.includes(v.color as typeof COLOR_OPTIONS[number]) ? v.color! : "Outro"}
                       onChange={(e) => {
                         const val = e.target.value;
                         setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, color: val === "Outro" ? "" : val } : it)));
@@ -457,13 +487,11 @@ export default function NovoProdutoPage() {
                       className="w-full rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 text-sm"
                     >
                       {COLOR_OPTIONS.map((o) => (
-                        <option key={o} value={o}>
-                          {o}
-                        </option>
+                        <option key={o} value={o}>{o}</option>
                       ))}
                       <option value="Outro">Outro</option>
                     </select>
-                    {COLOR_OPTIONS.includes((v.color || "") as any) ? null : (
+                    {!COLOR_OPTIONS.includes(v.color as typeof COLOR_OPTIONS[number]) && (
                       <Input
                         value={v.color || ""}
                         onChange={(e) => setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, color: e.target.value } : it)))}
@@ -475,14 +503,12 @@ export default function NovoProdutoPage() {
                   <div className="space-y-2">
                     <Label>Personalização</Label>
                     <select
-                      value={(v.personalization || "Não") as any}
+                      value={v.personalization || "Não"}
                       onChange={(e) => setVariants((arr) => arr.map((it, i) => (i === idx ? { ...it, personalization: e.target.value } : it)))}
                       className="w-full rounded-xl border border-[hsl(var(--border))] bg-white px-3 py-2 text-sm"
                     >
                       {PERSONAL_OPTIONS.map((o) => (
-                        <option key={o} value={o}>
-                          {o}
-                        </option>
+                        <option key={o} value={o}>{o}</option>
                       ))}
                     </select>
                   </div>
@@ -532,8 +558,8 @@ export default function NovoProdutoPage() {
           </div>
         </div>
 
-        {err ? <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{err}</div> : null}
-        {ok ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">{ok}</div> : null}
+        {err && <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{err}</div>}
+        {ok && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">{ok}</div>}
 
         <div className="flex gap-3">
           <Button type="submit" disabled={!canSave || loading}>

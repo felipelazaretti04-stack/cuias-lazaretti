@@ -574,7 +574,7 @@ export default function AdminConteudoPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label>Link "Ver todos"</Label>
+                        <Label>Link &quot;Ver todos&quot;</Label>
                         <Input
                           value={r.hrefAll || ""}
                           onChange={(e) => setRails((arr) => arr.map((x) => (x.id === r.id ? { ...x, hrefAll: e.target.value } : x)))}
